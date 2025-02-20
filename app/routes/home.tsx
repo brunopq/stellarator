@@ -1,29 +1,19 @@
-import { createSelectSchema } from "drizzle-zod"
 import type { Route } from "./+types/home"
 import { Link } from "react-router"
-import type { z } from "zod"
 
-import { db } from "~/services/db"
-import { formTemplate, formField, formSubmission } from "~/services/db/schema"
+import FormTemplateService, {
+  type FormTemplate,
+  type FormField,
+} from "~/.server/services/FormTemplateService"
+
 import { Button } from "~/components/ui/button"
-
-const formTemplateSchema = createSelectSchema(formTemplate)
-type FormTemplate = z.infer<typeof formTemplateSchema>
-const formFieldSchema = createSelectSchema(formField)
-export type FormField = z.infer<typeof formFieldSchema>
-const formSubmissionSchema = createSelectSchema(formSubmission)
-type FormSubmission = z.infer<typeof formSubmissionSchema>
 
 export function meta() {
   return [{ title: "" }]
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const something = await db.query.formTemplate.findMany({
-    with: { formFields: true, formSubmissions: true },
-  })
-
-  return something
+  return await FormTemplateService.list()
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
@@ -50,7 +40,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 type TemplateProps = FormTemplate & {
   formFields: FormField[]
-  formSubmissions: FormSubmission[]
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  formSubmissions: any[]
 }
 
 function Template({

@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/bun-sql"
 import { migrate } from "drizzle-orm/bun-sql/migrator"
 import { SQL } from "bun"
 
-import { env } from "~/utils/envConfig"
+import { env } from "~/utils/envConfig.server"
 
 import * as schema from "./schema"
 

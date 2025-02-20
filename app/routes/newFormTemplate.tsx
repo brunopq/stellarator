@@ -1,7 +1,12 @@
 import type { Route } from "./+types/newFormTemplate"
+import { memo, useState, type JSX } from "react"
 import { Select } from "radix-ui"
-import { useState, type JSX } from "react"
+import { useFetcher } from "react-router"
+import { useShallow } from "zustand/react/shallow"
+import { combine } from "zustand/middleware"
+import { create } from "zustand/react"
 import {
+  AsteriskIcon,
   CalendarFoldIcon,
   CheckCircle2Icon,
   CheckIcon,
@@ -10,38 +15,137 @@ import {
   LetterTextIcon,
   PencilIcon,
   ScrollTextIcon,
-  TextIcon,
 } from "lucide-react/icons"
+
+import FormTemplateService, {
+  newFormTemplateWithFieldsSchema,
+  type FormField,
+} from "~/.server/services/FormTemplateService"
 
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Textarea } from "~/components/ui/textarea"
 
-import type { FormField } from "./home"
-
 export async function loader() {
   return {}
 }
 
+export async function action({ request }: Route.ActionArgs) {
+  console.log("action running hopefully")
+  const body = await request.json()
+
+  const parsed = newFormTemplateWithFieldsSchema.safeParse(body)
+
+  if (!parsed.success) {
+    console.log(parsed.error)
+    return { error: "Invalid body" }
+  }
+
+  const a = await FormTemplateService.create(parsed.data)
+
+  return {}
+}
+
+const useNewFormTemplateStore = create(
+  combine(
+    {
+      templateName: "",
+      templateDescription: "",
+      fields: [] as PartialFormField[],
+    },
+    (set, get) => ({
+      setTemplateName: (name: string) => set({ templateName: name }),
+      setTemplateDescription: (description: string) =>
+        set({ templateDescription: description }),
+      addField: () =>
+        set((state) => ({
+          fields: [
+            ...state.fields,
+            {
+              id: Math.random(),
+              order: state.fields.length + 1,
+              name: "",
+              type: "text",
+              required: false,
+            },
+          ],
+        })),
+      setFieldName: (id: number, name: string) =>
+        set((state) => ({
+          fields: state.fields.map((field) =>
+            field.id === id ? { ...field, name } : field,
+          ),
+        })),
+      setFieldType: (id: number, type: PartialFormField["type"]) =>
+        set((state) => ({
+          fields: state.fields.map((field) =>
+            field.id === id ? { ...field, type } : field,
+          ),
+        })),
+      setFieldRequired: (id: number, required: boolean) =>
+        set((state) => ({
+          fields: state.fields.map((field) =>
+            field.id === id ? { ...field, required } : field,
+          ),
+        })),
+    }),
+  ),
+)
+
 export default function NewFormTemplate({ loaderData }: Route.ComponentProps) {
+  const fetcher = useFetcher<typeof action>()
+
+  const [name, description, setDescription, setName] = useNewFormTemplateStore(
+    useShallow((s) => [
+      s.templateName,
+      s.templateDescription,
+      s.setTemplateDescription,
+      s.setTemplateName,
+    ]),
+  )
+
+  function handleSaveForm() {
+    const state = useNewFormTemplateStore.getState()
+    fetcher.submit(
+      {
+        name: state.templateName,
+        description: state.templateDescription,
+        formFields: state.fields,
+      },
+      { method: "POST", encType: "application/json" },
+    )
+
+    console.log(state)
+  }
+
   return (
     <>
       <header className="mb-8 flex items-center justify-between">
         <h1 className="font-semibold text-2xl">Novo template</h1>
 
-        <Button>Salvar</Button>
+        <Button onClick={handleSaveForm}>Salvar</Button>
       </header>
 
       <div>
         <div className="grid grid-cols-2 gap-4">
           <label>
             <span>Nome</span>
-            <Input placeholder="Nome..." type="text" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nome..."
+              type="text"
+            />
           </label>
 
           <label>
             <span>Descrição</span>
-            <Input placeholder="Descição..." type="text" />
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descição..."
+              type="text"
+            />
           </label>
         </div>
 
@@ -57,118 +161,61 @@ type PartialFormField = Omit<FormField, "id" | "formTemplateId"> & {
   id: number
 }
 
-function Fields() {
-  const [fields, setFields] = useState<PartialFormField[]>([
-    {
-      id: Math.random(),
-      name: "Campo 1",
-      order: 1,
-      required: true,
-      type: "text",
-    },
-    {
-      id: Math.random(),
-      name: "Campo 2",
-      order: 2,
-      required: false,
-      type: "textarea",
-    },
-
-    {
-      id: Math.random(),
-      name: "Campo 3",
-      order: 3,
-      required: false,
-      type: "number",
-    },
-    {
-      id: Math.random(),
-      name: "Campo 4",
-      order: 4,
-      required: false,
-      type: "date",
-    },
-    {
-      id: Math.random(),
-      name: "Campo 5",
-      order: 5,
-      required: false,
-      type: "checkbox",
-    },
-  ])
-
-  function handleChange(
-    id: number,
-    field: keyof PartialFormField,
-    value: PartialFormField[typeof field],
-  ) {
-    setFields((fields) =>
-      fields.map((f) => (f.id === id ? { ...f, [field]: value } : f)),
-    )
-  }
+const Fields = memo(() => {
+  const [fields, addField] = useNewFormTemplateStore(
+    useShallow((s) => [s.fields, s.addField]),
+  )
 
   return (
-    <div className="grid grid-cols-[auto_1fr] gap-12">
+    <div className="grid grid-cols-2 gap-12">
       <div>
         <h3 className="mb-4 font-semibold text-xl">Campos</h3>
 
         <div className="space-y-4">
           {fields.map((field) => (
-            <Field key={field.id} {...field} onChange={handleChange} />
+            <Field key={field.id} id={field.id} />
           ))}
         </div>
 
-        <Button
-          className="mt-8"
-          onClick={() => {
-            setFields([
-              ...fields,
-              {
-                id: Math.random(),
-                type: "text",
-                name: "Campo novo",
-                required: false,
-                order: fields.length,
-              },
-            ])
-          }}
-        >
+        <Button className="mt-8" onClick={addField}>
           Adicionar campo
         </Button>
       </div>
 
-      <div>
+      <div className="min-w-0">
         <h3 className="mb-4 font-semibold text-xl">Prévia</h3>
 
-        <div className="space-y-4">prévia do formulário</div>
+        <FormTemplatePreview />
       </div>
     </div>
   )
-}
+})
 
-type FieldProps = PartialFormField & {
-  onChange: (
-    id: number,
-    field: keyof PartialFormField,
-    value: PartialFormField[typeof field],
-  ) => void
-}
+type FieldProps = { id: number }
 
-function Field({ id, type, name, onChange, required }: FieldProps) {
+const Field = memo(({ id }: FieldProps) => {
+  const [field, setFieldRequired] = useNewFormTemplateStore(
+    useShallow((s) => [s.fields.find((f) => f.id === id), s.setFieldRequired]),
+  )
+
+  if (!field) {
+    return null
+  }
+
   return (
-    <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 rounded-sm border border-zinc-300 p-2 shadow-sm dark:border-zinc-800">
+    <div className="grid max-w-md grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 overflow-hidden rounded-sm border border-zinc-300 px-2 py-1 shadow-sm dark:border-zinc-800">
       <strong className="text-sm text-zinc-500 dark:text-zinc-400">
         Campo:
       </strong>
 
-      <NameInput id={id} name={name} onChange={onChange} />
+      <NameInput id={id} name={field.name} />
 
       <strong className="text-sm text-zinc-500 dark:text-zinc-400">
         Tipo:
       </strong>
 
       <div className="group flex items-center gap-2">
-        <TypeSelect id={id} value={type} onChange={onChange} />
+        <TypeSelect id={id} value={field.type} />
       </div>
 
       <strong className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -177,15 +224,15 @@ function Field({ id, type, name, onChange, required }: FieldProps) {
       <label className="flex w-fit select-none items-center gap-2 rounded-md px-2 py-0.5 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-800">
         <input
           type="checkbox"
-          checked={required}
-          onChange={(e) => onChange(id, "required", e.target.checked)}
+          checked={field.required}
+          onChange={(e) => setFieldRequired(id, e.target.checked)}
           className=""
         />
-        {required ? "Sim" : "Não"}
+        {field.required ? "Sim" : "Não"}
       </label>
     </div>
   )
-}
+})
 
 const typeMap: Record<FormField["type"], JSX.Element> = {
   text: (
@@ -223,15 +270,14 @@ const typeMap: Record<FormField["type"], JSX.Element> = {
 type TypeSelectProps = {
   id: number
   value: FormField["type"]
-  onChange: FieldProps["onChange"]
 }
 
-function TypeSelect({ id, value, onChange }: TypeSelectProps) {
+function TypeSelect({ id, value }: TypeSelectProps) {
+  const setFieldType = useNewFormTemplateStore((s) => s.setFieldType)
+
   return (
     <Select.Root
-      onValueChange={(value) =>
-        onChange(id, "type", value as FormField["type"])
-      }
+      onValueChange={(value) => setFieldType(id, value as FormField["type"])}
       value={value}
     >
       <Select.Trigger className="group flex items-center justify-between gap-4 rounded-md px-2 py-0.5 outline-0 transition-colors hover:bg-zinc-300 focus-visible:bg-zinc-300 data-[state='open']:bg-zinc-300 dark:data-[state='open']:bg-zinc-800 dark:focus-visible:bg-zinc-800 dark:hover:bg-zinc-800">
@@ -263,21 +309,23 @@ function TypeSelect({ id, value, onChange }: TypeSelectProps) {
 type NameInputProps = {
   id: number
   name: string
-  onChange: (id: number, field: "name", value: string) => void
 }
 
-function NameInput({ id, name, onChange }: NameInputProps) {
+function NameInput({ id, name }: NameInputProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const setFieldName = useNewFormTemplateStore((s) => s.setFieldName)
 
   if (!isEditing) {
     return (
       <button
         onClick={() => setIsEditing(true)}
         type="button"
-        className="group flex w-fit items-center gap-2 rounded-md px-2 py-0.5 outline-0 hover:bg-zinc-300 focus-visible:bg-zinc-300 dark:focus-visible:bg-zinc-800 dark:hover:bg-zinc-800"
+        className="group flex min-w-0 max-w-full cursor-pointer items-center gap-2 rounded-md px-2 py-0.5 outline-0 hover:bg-zinc-300 focus-visible:bg-zinc-300 dark:focus-visible:bg-zinc-800 dark:hover:bg-zinc-800"
       >
-        <span>{name}</span>
-        <PencilIcon className="size-0 transition-all group-hover:size-4" />
+        <span className="overflow-hidden overflow-ellipsis">{name}</span>
+        <div>
+          <PencilIcon className="size-0 transition-all group-hover:size-4" />
+        </div>
       </button>
     )
   }
@@ -289,7 +337,7 @@ function NameInput({ id, name, onChange }: NameInputProps) {
         type="text"
         value={name}
         onChange={(e) => {
-          onChange(id, "name", e.target.value)
+          setFieldName(id, e.target.value)
         }}
         onBlur={() => setIsEditing(false)}
       />
@@ -300,6 +348,47 @@ function NameInput({ id, name, onChange }: NameInputProps) {
       >
         <CheckIcon className="size-4" />
       </button>
+    </div>
+  )
+}
+
+function FormTemplatePreview() {
+  const fields = useNewFormTemplateStore((s) => s.fields)
+
+  return (
+    <div className="w-lg space-y-4">
+      {fields.map((field) => (
+        <div key={field.id} className="">
+          <strong className="-mb-0.5 relative inline-block text-sm text-zinc-700">
+            <span className="overflow-hidden overflow-ellipsis">
+              {field.name}
+            </span>
+            {field.required && (
+              <AsteriskIcon className="-translate-y-1/6 absolute top-0 right-0 size-3.5 translate-x-4/5 text-red-500" />
+            )}
+          </strong>
+          <label>
+            {(field.type === "text" && (
+              <Input placeholder={`${field.name}...`} type="text" />
+            )) ||
+              (field.type === "number" && (
+                <Input placeholder={`${field.name}...`} type="number" />
+              )) ||
+              (field.type === "textarea" && (
+                <Textarea placeholder={`${field.name}...`} />
+              )) ||
+              (field.type === "date" && (
+                <Input placeholder={`${field.name}...`} type="date" />
+              )) ||
+              (field.type === "checkbox" && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" />
+                  <span>{field.name}</span>
+                </label>
+              ))}
+          </label>
+        </div>
+      ))}
     </div>
   )
 }
