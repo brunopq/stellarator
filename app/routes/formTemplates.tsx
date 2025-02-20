@@ -1,4 +1,4 @@
-import type { Route } from "./+types/home"
+import type { Route } from "./+types/formTemplates"
 import { Link } from "react-router"
 
 import FormTemplateService, {
@@ -25,7 +25,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </h1>
 
         <Button asChild>
-          <Link to="/form-templates/new">Novo template</Link>
+          <Link to="new">Novo template</Link>
         </Button>
       </header>
 
