@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "~/utils/classes"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center shadow-sm  whitespace-nowrap rounded-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center shadow-sm whitespace-nowrap rounded-xs font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       size: {
@@ -20,7 +20,7 @@ const buttonVariants = cva(
       },
       variant: {
         default:
-          "bg-primary-700 text-primary-50 hover:bg-primary-700/90 dark:bg-primary-50 dark:text-primary-900 dark:hover:bg-primary-50/90",
+          "bg-primary-700 text-primary-50 hover:bg-primary-700/90 dark:bg-primary-300 dark:text-primary-950 dark:hover:bg-primary-300/80",
         destructive:
           "bg-red-500 text-zinc-50 hover:bg-red-500/90 dark:bg-red-900 dark:text-zinc-50 dark:hover:bg-red-900/90",
         outline:
