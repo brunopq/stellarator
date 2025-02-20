@@ -15,6 +15,7 @@ import {
   LetterTextIcon,
   PencilIcon,
   ScrollTextIcon,
+  Trash2Icon,
 } from "lucide-react/icons"
 
 import FormTemplateService, {
@@ -64,7 +65,7 @@ const useNewFormTemplateStore = create(
             {
               id: Math.random(),
               order: state.fields.length + 1,
-              name: "",
+              name: "Campo novo",
               type: "text",
               required: false,
             },
@@ -87,6 +88,10 @@ const useNewFormTemplateStore = create(
           fields: state.fields.map((field) =>
             field.id === id ? { ...field, required } : field,
           ),
+        })),
+      removeField: (id: number) =>
+        set((state) => ({
+          fields: state.fields.filter((field) => field.id !== id),
         })),
     }),
   ),
@@ -194,8 +199,12 @@ const Fields = memo(() => {
 type FieldProps = { id: number }
 
 const Field = memo(({ id }: FieldProps) => {
-  const [field, setFieldRequired] = useNewFormTemplateStore(
-    useShallow((s) => [s.fields.find((f) => f.id === id), s.setFieldRequired]),
+  const [field, setFieldRequired, removeField] = useNewFormTemplateStore(
+    useShallow((s) => [
+      s.fields.find((f) => f.id === id),
+      s.setFieldRequired,
+      s.removeField,
+    ]),
   )
 
   if (!field) {
@@ -221,15 +230,28 @@ const Field = memo(({ id }: FieldProps) => {
       <strong className="text-sm text-zinc-500 dark:text-zinc-400">
         Obrigatório:
       </strong>
-      <label className="flex w-fit select-none items-center gap-2 rounded-md px-2 py-0.5 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-800">
-        <input
-          type="checkbox"
-          checked={field.required}
-          onChange={(e) => setFieldRequired(id, e.target.checked)}
-          className=""
-        />
-        {field.required ? "Sim" : "Não"}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex w-fit select-none items-center gap-2 rounded-md px-2 py-0.5 transition-colors hover:bg-zinc-300 dark:hover:bg-zinc-800">
+          <input
+            type="checkbox"
+            checked={field.required}
+            onChange={(e) => setFieldRequired(id, e.target.checked)}
+            className=""
+          />
+          {field.required ? "Sim" : "Não"}
+        </label>
+
+        <button
+          type="button"
+          onClick={() => removeField(id)}
+          className="group flex cursor-pointer items-center gap-2 rounded-sm p-0.5 pl-2 text-red-400 text-sm transition-colors *:transition-all hover:bg-red-200 hover:text-red-700 dark:text-red-700 dark:hover:bg-red-900 dark:hover:text-red-200"
+        >
+          <span className="opacity-0 transition group-hover:opacity-100">
+            Remover
+          </span>
+          <Trash2Icon className="size-4" />
+        </button>
+      </div>
     </div>
   )
 })
@@ -359,12 +381,12 @@ function FormTemplatePreview() {
     <div className="w-lg space-y-4">
       {fields.map((field) => (
         <div key={field.id} className="">
-          <strong className="-mb-0.5 relative inline-block text-sm text-zinc-700">
+          <strong className="-mb-0.5 relative inline-block text-sm text-zinc-700 dark:text-zinc-400">
             <span className="overflow-hidden overflow-ellipsis">
               {field.name}
             </span>
             {field.required && (
-              <AsteriskIcon className="-translate-y-1/6 absolute top-0 right-0 size-3.5 translate-x-4/5 text-red-500" />
+              <AsteriskIcon className="-translate-y-1/6 absolute top-0 right-0 size-3.5 translate-x-4/5 text-red-500 dark:text-red-400" />
             )}
           </strong>
           <label>
