@@ -1,8 +1,12 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod"
 import { z } from "zod"
 
-import { formField, formTemplate } from "../db/schema"
+import { formField, formTemplate, formFieldTypes } from "../db/schema"
 import { db } from "../db"
+import { eq } from "drizzle-orm"
+
+export const formFieldTypesSchema = z.enum(formFieldTypes.enumValues)
+export type FormFieldType = z.infer<typeof formFieldTypesSchema>
 
 export const formTemplateSchema = createSelectSchema(formTemplate)
 export type FormTemplate = z.infer<typeof formTemplateSchema>
@@ -28,6 +32,63 @@ export type NewFormTemplateWithFields = z.infer<
 >
 
 class FormTemplateService {
+  async createTemplate(
+    newFormTemplate: NewFormTemplate,
+  ): Promise<FormTemplate> {
+    const [createdFormTemplate] = await db
+      .insert(formTemplate)
+      .values(newFormTemplate)
+      .returning()
+
+    return createdFormTemplate
+  }
+
+  async createTemplateField(newFormField: NewFormField): Promise<FormField> {
+    const [createdFormField] = await db
+      .insert(formField)
+      .values(newFormField)
+      .returning()
+
+    return createdFormField
+  }
+
+  async createManyTemplateField(
+    newFormFields: NewFormField[],
+  ): Promise<FormField[]> {
+    const createdFormFields = await db
+      .insert(formField)
+      .values(newFormFields)
+      .returning()
+
+    return createdFormFields
+  }
+
+  async updateFormTemplate(
+    formTemplateId: string,
+    updateFormTemplate: Partial<NewFormTemplate>,
+  ): Promise<FormTemplate> {
+    const [updatedFormTemplate] = await db
+      .update(formTemplate)
+      .set(updateFormTemplate)
+      .where(eq(formTemplate.id, formTemplateId))
+      .returning()
+
+    return updatedFormTemplate
+  }
+
+  async updateFormField(
+    formFieldId: string,
+    updateFormField: Partial<NewFormField>,
+  ): Promise<FormField> {
+    const [updatedFormField] = await db
+      .update(formField)
+      .set(updateFormField)
+      .where(eq(formField.id, formFieldId))
+      .returning()
+
+    return updatedFormField
+  }
+
   async create(
     newFormTemplate: NewFormTemplateWithFields,
   ): Promise<FormTemplateWithFields> {

@@ -1,5 +1,5 @@
 import type { Route } from "./+types/formTemplates"
-import { Link } from "react-router"
+import { Form, Link, redirect } from "react-router"
 
 import FormTemplateService, {
   type FormTemplate,
@@ -16,6 +16,15 @@ export async function loader({ request }: Route.LoaderArgs) {
   return await FormTemplateService.list()
 }
 
+export async function action({ request }: Route.ActionArgs) {
+  const createdTemplate = await FormTemplateService.createTemplate({
+    name: "Novo template",
+    description: "Detalhes sobre o template",
+  })
+
+  return redirect(`edit/${createdTemplate.id}`)
+}
+
 export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <>
@@ -24,14 +33,15 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           Templates ({loaderData.length})
         </h1>
 
-        <Button asChild>
-          <Link to="new">Novo template</Link>
-        </Button>
+        <Form method="POST">
+          <Button type="submit">Novo template</Button>
+        </Form>
       </header>
 
       <div className="flex flex-wrap gap-4">
         {loaderData.map((template) => (
-          <Template key={template.id} {...template} />
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          <Template key={template.id} {...(template as any)} />
         ))}
       </div>
     </>
@@ -45,16 +55,25 @@ type TemplateProps = FormTemplate & {
 }
 
 function Template({
+  id,
   name,
   description,
   formFields,
   formSubmissions,
 }: TemplateProps) {
   return (
-    <div className="min-w-lg border p-4">
+    <div className="min-w-lg border p-4 dark:border-zinc-500">
       <header className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="font-semibold text-lg">{name}</h2>
+          <span className="flex w-fit items-center justify-between gap-4 ">
+            <h2 className="font-semibold text-lg">{name}</h2>
+            <Link
+              className="rounded-lg px-1.5 font-semibold text-sm transition-colors dark:bg-primary-400/25 dark:text-primary-100 dark:hover:bg-primary-300/40 dark:hover:text-primary-50"
+              to={`edit/${id}`}
+            >
+              Editar
+            </Link>
+          </span>
           <p>{description}</p>
         </div>
         <div>
@@ -63,7 +82,7 @@ function Template({
         </div>
       </header>
 
-      <hr className="my-2" />
+      <hr className="my-2 dark:border-zinc-500" />
 
       <div className="flex flex-wrap gap-2">
         {formFields.map((field) => (
@@ -78,7 +97,7 @@ type FieldProps = FormField
 
 function Field({ name, type, required }: FieldProps) {
   return (
-    <div className="border p-2">
+    <div className="border p-2 dark:border-zinc-500">
       <h3 className="font-semibold text-md">{name}</h3>
       <p>{type}</p>
       <p>{required ? "Obrigatório" : "Opcional"}</p>
