@@ -16,7 +16,7 @@ import {
 } from "lucide-react/icons"
 
 import FormTemplateService, {
-  newFormTemplateWithFieldsSchema,
+  formTemplateWithFieldsSchema,
   type FormField,
   type FormFieldType,
   type FormTemplateWithFields,
@@ -26,6 +26,7 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Textarea } from "~/components/ui/textarea"
 import { FormTemplatePreview } from "~/components/Form"
+import { createMatcher } from "~/utils/actionMatcher"
 
 export async function loader({ params }: Route.LoaderArgs) {
   const formTemplateId = params.id
@@ -37,20 +38,26 @@ export async function loader({ params }: Route.LoaderArgs) {
   return { formTemplate }
 }
 
+async function putAction(request: Request) {
+  const json = await request.json()
+
+  const parsed = formTemplateWithFieldsSchema.parse(json)
+
+  const updated = await FormTemplateService.syncFormTemplateAndFields(parsed)
+
+  console.log(updated)
+
+  return updated
+}
+
 export async function action({ request }: Route.ActionArgs) {
-  console.log("action running hopefully")
-  const body = await request.json()
+  const matcher = createMatcher<Request>()({
+    PUT: putAction,
+  })
 
-  const parsed = newFormTemplateWithFieldsSchema.safeParse(body)
+  const match = await matcher(request.method, request)
 
-  if (!parsed.success) {
-    console.log(parsed.error)
-    return { error: "Invalid body" }
-  }
-
-  const a = await FormTemplateService.create(parsed.data)
-
-  return {}
+  return match
 }
 
 type EditFormTemplateContext = {
@@ -92,7 +99,18 @@ function EditFormTemplateContextProvider({
   children,
   initialFormTemplate,
 }: EditFormTemplateContextProviderProps) {
+  const syncFetcher = useFetcher<typeof action>()
+
   const [formTemplate, setFormTemplate] = useState(initialFormTemplate)
+
+  function sync() {
+    console.log(formTemplate)
+
+    syncFetcher.submit(formTemplate, {
+      encType: "application/json",
+      method: "PUT",
+    })
+  }
 
   function setName(name: string) {
     setFormTemplate((prev) => ({ ...prev, name }))
@@ -158,7 +176,7 @@ function EditFormTemplateContextProvider({
       value={{
         formTemplate,
 
-        sync: () => console.log("lol"),
+        sync,
 
         setName,
         setDescription,
@@ -196,11 +214,13 @@ export default function EditFormTemplate({ loaderData }: Route.ComponentProps) {
 }
 
 function EditFormTemplateHeader() {
+  const { sync } = useEditFormTemplateContext()
+
   return (
     <header className="mb-8 flex items-center justify-between">
       <h1 className="font-semibold text-2xl">Novo template</h1>
 
-      <Button onClick={() => "save"}>Salvar</Button>
+      <Button onClick={sync}>Salvar</Button>
     </header>
   )
 }

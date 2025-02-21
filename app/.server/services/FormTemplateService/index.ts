@@ -1,9 +1,9 @@
 import { createInsertSchema, createSelectSchema } from "drizzle-zod"
+import { eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { formField, formTemplate, formFieldTypes } from "../db/schema"
 import { db } from "../db"
-import { eq } from "drizzle-orm"
 
 export const formFieldTypesSchema = z.enum(formFieldTypes.enumValues)
 export type FormFieldType = z.infer<typeof formFieldTypesSchema>
@@ -22,7 +22,12 @@ export const newFormFieldSchema = createInsertSchema(formField).omit({
 })
 export type NewFormField = z.infer<typeof newFormFieldSchema>
 
-export type FormTemplateWithFields = FormTemplate & { formFields: FormField[] }
+export const formTemplateWithFieldsSchema = formTemplateSchema.extend({
+  formFields: z.array(formFieldSchema),
+})
+export type FormTemplateWithFields = z.infer<
+  typeof formTemplateWithFieldsSchema
+>
 
 export const newFormTemplateWithFieldsSchema = newFormTemplateSchema.extend({
   formFields: z.array(newFormFieldSchema.omit({ formTemplateId: true })),
@@ -61,6 +66,58 @@ class FormTemplateService {
       .returning()
 
     return createdFormFields
+  }
+
+  async syncFormTemplateAndFields(
+    formTemplateWithFields: FormTemplateWithFields,
+  ): Promise<FormTemplateWithFields> {
+    console.log("syncing!!!")
+    console.log(formTemplateWithFields)
+
+    const updatedTemplate = await this.updateFormTemplate(
+      formTemplateWithFields.id,
+      {
+        name: formTemplateWithFields.name,
+        description: formTemplateWithFields.description,
+      },
+    )
+
+    console.log(updatedTemplate)
+
+    const oldIds = new Set(
+      (
+        await db
+          .select({ id: formField.id })
+          .from(formField)
+          .where(eq(formField.formTemplateId, formTemplateWithFields.id))
+      ).map(({ id }) => id),
+    )
+
+    console.log("old ids: ")
+    console.log(oldIds)
+
+    const updatedFields = await Promise.all(
+      formTemplateWithFields.formFields.map((field) => {
+        if (oldIds.has(field.id)) {
+          console.log(`Updating: ${field.id}`)
+          oldIds.delete(field.id)
+          return this.updateFormField(field.id, field)
+        }
+
+        console.log(`Creating: ${field.id}`)
+        return this.createTemplateField(field)
+      }),
+    )
+
+    for (const fieldId of oldIds) {
+      console.log(`Deleting field ${fieldId}`)
+      await this.deleteFormField(fieldId)
+    }
+
+    return {
+      ...updatedTemplate,
+      formFields: updatedFields,
+    }
   }
 
   async updateFormTemplate(
@@ -127,6 +184,10 @@ class FormTemplateService {
       where: (ft, { eq }) => eq(ft.id, id),
       with: { formFields: true },
     })
+  }
+
+  async deleteFormField(fieldId: string) {
+    await db.delete(formField).where(eq(formField.id, fieldId))
   }
 }
 
