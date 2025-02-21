@@ -10,7 +10,7 @@ export default [
   layout("layouts/maxWidth.tsx", [
     ...prefix("form-templates", [
       index("routes/formTemplates.tsx"),
-      route("new", "routes/newFormTemplate.tsx"),
+      route("edit/:id", "routes/editFormTemplate.tsx"),
     ]),
     ...prefix("submissions", [
       index("routes/submissions.tsx"),

@@ -1,10 +1,7 @@
-import type { Route } from "./+types/newFormTemplate"
-import { memo, useState, type JSX } from "react"
+import type { Route } from "./+types/editFormTemplate"
+import { createContext, memo, useContext, useState, type JSX } from "react"
 import { Select } from "radix-ui"
-import { useFetcher } from "react-router"
-import { useShallow } from "zustand/react/shallow"
-import { combine } from "zustand/middleware"
-import { create } from "zustand/react"
+import { redirect, useFetcher } from "react-router"
 import {
   AsteriskIcon,
   CalendarFoldIcon,
@@ -21,14 +18,23 @@ import {
 import FormTemplateService, {
   newFormTemplateWithFieldsSchema,
   type FormField,
+  type FormFieldType,
+  type FormTemplateWithFields,
 } from "~/.server/services/FormTemplateService"
 
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Textarea } from "~/components/ui/textarea"
+import { FormTemplatePreview } from "~/components/Form"
 
-export async function loader() {
-  return {}
+export async function loader({ params }: Route.LoaderArgs) {
+  const formTemplateId = params.id
+
+  const formTemplate = await FormTemplateService.get(formTemplateId)
+
+  if (!formTemplate) throw redirect("/form-template")
+
+  return { formTemplate }
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -47,129 +53,190 @@ export async function action({ request }: Route.ActionArgs) {
   return {}
 }
 
-const useNewFormTemplateStore = create(
-  combine(
-    {
-      templateName: "",
-      templateDescription: "",
-      fields: [] as PartialFormField[],
-    },
-    (set, get) => ({
-      setTemplateName: (name: string) => set({ templateName: name }),
-      setTemplateDescription: (description: string) =>
-        set({ templateDescription: description }),
-      addField: () =>
-        set((state) => ({
-          fields: [
-            ...state.fields,
-            {
-              id: Math.random(),
-              order: state.fields.length + 1,
-              name: "Campo novo",
-              type: "text",
-              required: false,
-            },
-          ],
-        })),
-      setFieldName: (id: number, name: string) =>
-        set((state) => ({
-          fields: state.fields.map((field) =>
-            field.id === id ? { ...field, name } : field,
-          ),
-        })),
-      setFieldType: (id: number, type: PartialFormField["type"]) =>
-        set((state) => ({
-          fields: state.fields.map((field) =>
-            field.id === id ? { ...field, type } : field,
-          ),
-        })),
-      setFieldRequired: (id: number, required: boolean) =>
-        set((state) => ({
-          fields: state.fields.map((field) =>
-            field.id === id ? { ...field, required } : field,
-          ),
-        })),
-      removeField: (id: number) =>
-        set((state) => ({
-          fields: state.fields.filter((field) => field.id !== id),
-        })),
-    }),
-  ),
+type EditFormTemplateContext = {
+  formTemplate: FormTemplateWithFields
+
+  sync: () => void
+
+  setName: (name: string) => void
+  setDescription: (description: string) => void
+  addField: () => void
+  setFieldName: (id: string, name: string) => void
+  setFieldType: (id: string, type: FormFieldType) => void
+  setFieldRequired: (id: string, required: boolean) => void
+  removeField: (id: string) => void
+}
+
+const editFormTemplateContext = createContext<EditFormTemplateContext | null>(
+  null,
 )
 
-export default function NewFormTemplate({ loaderData }: Route.ComponentProps) {
-  const fetcher = useFetcher<typeof action>()
+function useEditFormTemplateContext() {
+  const ctx = useContext(editFormTemplateContext)
 
-  const [name, description, setDescription, setName] = useNewFormTemplateStore(
-    useShallow((s) => [
-      s.templateName,
-      s.templateDescription,
-      s.setTemplateDescription,
-      s.setTemplateName,
-    ]),
-  )
-
-  function handleSaveForm() {
-    const state = useNewFormTemplateStore.getState()
-    fetcher.submit(
-      {
-        name: state.templateName,
-        description: state.templateDescription,
-        formFields: state.fields,
-      },
-      { method: "POST", encType: "application/json" },
+  if (!ctx) {
+    throw new Error(
+      "`useEditFormTemplateContext` should be used inside the `EditFormTemplateContextProvider`",
     )
+  }
 
-    console.log(state)
+  return ctx
+}
+
+type EditFormTemplateContextProviderProps = {
+  children: JSX.Element
+  initialFormTemplate: FormTemplateWithFields
+}
+
+function EditFormTemplateContextProvider({
+  children,
+  initialFormTemplate,
+}: EditFormTemplateContextProviderProps) {
+  const [formTemplate, setFormTemplate] = useState(initialFormTemplate)
+
+  function setName(name: string) {
+    setFormTemplate((prev) => ({ ...prev, name }))
+  }
+
+  function setDescription(description: string) {
+    setFormTemplate((prev) => ({ ...prev, description }))
+  }
+
+  function addField() {
+    setFormTemplate((prev) => ({
+      ...prev,
+      formFields: [
+        ...prev.formFields,
+        {
+          formTemplateId: prev.id,
+          id: String(Math.random()),
+          name: "Campo novo",
+          order: prev.formFields.length,
+          required: false,
+          type: "text",
+        },
+      ],
+    }))
+  }
+
+  function setFieldName(id: string, name: string) {
+    setFormTemplate((prev) => ({
+      ...prev,
+      formFields: prev.formFields.map((f) =>
+        f.id === id ? { ...f, name } : f,
+      ),
+    }))
+  }
+
+  function setFieldType(id: string, type: FormFieldType) {
+    setFormTemplate((prev) => ({
+      ...prev,
+      formFields: prev.formFields.map((f) =>
+        f.id === id ? { ...f, type } : f,
+      ),
+    }))
+  }
+
+  function setFieldRequired(id: string, required: boolean) {
+    setFormTemplate((prev) => ({
+      ...prev,
+      formFields: prev.formFields.map((f) =>
+        f.id === id ? { ...f, required } : f,
+      ),
+    }))
+  }
+
+  function removeField(id: string) {
+    setFormTemplate((prev) => ({
+      ...prev,
+      formFields: prev.formFields.filter((f) => f.id !== id),
+    }))
   }
 
   return (
-    <>
-      <header className="mb-8 flex items-center justify-between">
-        <h1 className="font-semibold text-2xl">Novo template</h1>
+    <editFormTemplateContext.Provider
+      value={{
+        formTemplate,
 
-        <Button onClick={handleSaveForm}>Salvar</Button>
-      </header>
+        sync: () => console.log("lol"),
 
-      <div>
-        <div className="grid grid-cols-2 gap-4">
-          <label>
-            <span>Nome</span>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nome..."
-              type="text"
-            />
-          </label>
+        setName,
+        setDescription,
+        addField,
+        setFieldName,
+        setFieldType,
+        setFieldRequired,
+        removeField,
+      }}
+    >
+      {children}
+    </editFormTemplateContext.Provider>
+  )
+}
 
-          <label>
-            <span>Descrição</span>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descição..."
-              type="text"
-            />
-          </label>
-        </div>
+export default function EditFormTemplate({ loaderData }: Route.ComponentProps) {
+  const { formTemplate } = loaderData
 
-        <div className="mt-4">
-          <Fields />
+  return (
+    <EditFormTemplateContextProvider initialFormTemplate={formTemplate}>
+      <div /*className="rounded-xs border p-8 shadow-lg dark:border-primary-900/50 dark:bg-zinc-800"*/
+      >
+        <EditFormTemplateHeader />
+
+        <div>
+          <EditFormTemplateInfo />
+
+          <div className="mt-4">
+            <Fields />
+          </div>
         </div>
       </div>
-    </>
+    </EditFormTemplateContextProvider>
   )
 }
 
-type PartialFormField = Omit<FormField, "id" | "formTemplateId"> & {
-  id: number
+function EditFormTemplateHeader() {
+  return (
+    <header className="mb-8 flex items-center justify-between">
+      <h1 className="font-semibold text-2xl">Novo template</h1>
+
+      <Button onClick={() => "save"}>Salvar</Button>
+    </header>
+  )
 }
+
+function EditFormTemplateInfo() {
+  const { formTemplate, setName, setDescription } = useEditFormTemplateContext()
+
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <label>
+        <span>Nome</span>
+        <Input
+          value={formTemplate.name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nome..."
+          type="text"
+        />
+      </label>
+
+      <label>
+        <span>Descrição</span>
+        <Input
+          value={formTemplate.description || ""}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Descição..."
+          type="text"
+        />
+      </label>
+    </div>
+  )
+}
+
+type PartialFormField = Omit<FormField, "formTemplateId">
 
 const Fields = memo(() => {
-  const [fields, addField] = useNewFormTemplateStore(
-    useShallow((s) => [s.fields, s.addField]),
-  )
+  const { formTemplate, addField } = useEditFormTemplateContext()
 
   return (
     <div className="grid grid-cols-2 gap-12">
@@ -177,8 +244,8 @@ const Fields = memo(() => {
         <h3 className="mb-4 font-semibold text-xl">Campos</h3>
 
         <div className="space-y-4">
-          {fields.map((field) => (
-            <Field key={field.id} id={field.id} />
+          {formTemplate.formFields.map((field) => (
+            <Field key={field.id} field={field} />
           ))}
         </div>
 
@@ -190,26 +257,16 @@ const Fields = memo(() => {
       <div className="min-w-0">
         <h3 className="mb-4 font-semibold text-xl">Prévia</h3>
 
-        <FormTemplatePreview />
+        {/*<FormTemplatePreview fields={fields} />*/}
       </div>
     </div>
   )
 })
 
-type FieldProps = { id: number }
+type FieldProps = { field: FormField }
 
-const Field = memo(({ id }: FieldProps) => {
-  const [field, setFieldRequired, removeField] = useNewFormTemplateStore(
-    useShallow((s) => [
-      s.fields.find((f) => f.id === id),
-      s.setFieldRequired,
-      s.removeField,
-    ]),
-  )
-
-  if (!field) {
-    return null
-  }
+const Field = memo(({ field }: FieldProps) => {
+  const { setFieldRequired, removeField } = useEditFormTemplateContext()
 
   return (
     <div className="grid max-w-md grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 overflow-hidden rounded-sm border border-zinc-300 px-2 py-1 shadow-sm dark:border-zinc-800">
@@ -217,14 +274,14 @@ const Field = memo(({ id }: FieldProps) => {
         Campo:
       </strong>
 
-      <NameInput id={id} name={field.name} />
+      <NameInput id={field.id} name={field.name} />
 
       <strong className="text-sm text-zinc-500 dark:text-zinc-400">
         Tipo:
       </strong>
 
       <div className="group flex items-center gap-2">
-        <TypeSelect id={id} value={field.type} />
+        <TypeSelect id={field.id} value={field.type} />
       </div>
 
       <strong className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -235,7 +292,7 @@ const Field = memo(({ id }: FieldProps) => {
           <input
             type="checkbox"
             checked={field.required}
-            onChange={(e) => setFieldRequired(id, e.target.checked)}
+            onChange={(e) => setFieldRequired(field.id, e.target.checked)}
             className=""
           />
           {field.required ? "Sim" : "Não"}
@@ -243,7 +300,7 @@ const Field = memo(({ id }: FieldProps) => {
 
         <button
           type="button"
-          onClick={() => removeField(id)}
+          onClick={() => removeField(field.id)}
           className="group flex cursor-pointer items-center gap-2 rounded-sm p-0.5 pl-2 text-red-400 text-sm transition-colors *:transition-all hover:bg-red-200 hover:text-red-700 dark:text-red-700 dark:hover:bg-red-900 dark:hover:text-red-200"
         >
           <span className="opacity-0 transition group-hover:opacity-100">
@@ -290,12 +347,12 @@ const typeMap: Record<FormField["type"], JSX.Element> = {
 }
 
 type TypeSelectProps = {
-  id: number
+  id: string
   value: FormField["type"]
 }
 
 function TypeSelect({ id, value }: TypeSelectProps) {
-  const setFieldType = useNewFormTemplateStore((s) => s.setFieldType)
+  const { setFieldType } = useEditFormTemplateContext()
 
   return (
     <Select.Root
@@ -329,13 +386,13 @@ function TypeSelect({ id, value }: TypeSelectProps) {
 }
 
 type NameInputProps = {
-  id: number
+  id: string
   name: string
 }
 
 function NameInput({ id, name }: NameInputProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const setFieldName = useNewFormTemplateStore((s) => s.setFieldName)
+  const { setFieldName } = useEditFormTemplateContext()
 
   if (!isEditing) {
     return (
@@ -370,47 +427,6 @@ function NameInput({ id, name }: NameInputProps) {
       >
         <CheckIcon className="size-4" />
       </button>
-    </div>
-  )
-}
-
-function FormTemplatePreview() {
-  const fields = useNewFormTemplateStore((s) => s.fields)
-
-  return (
-    <div className="w-lg space-y-4">
-      {fields.map((field) => (
-        <div key={field.id} className="">
-          <strong className="-mb-0.5 relative inline-block text-sm text-zinc-700 dark:text-zinc-400">
-            <span className="overflow-hidden overflow-ellipsis">
-              {field.name}
-            </span>
-            {field.required && (
-              <AsteriskIcon className="-translate-y-1/6 absolute top-0 right-0 size-3.5 translate-x-4/5 text-red-500 dark:text-red-400" />
-            )}
-          </strong>
-          <label>
-            {(field.type === "text" && (
-              <Input placeholder={`${field.name}...`} type="text" />
-            )) ||
-              (field.type === "number" && (
-                <Input placeholder={`${field.name}...`} type="number" />
-              )) ||
-              (field.type === "textarea" && (
-                <Textarea placeholder={`${field.name}...`} />
-              )) ||
-              (field.type === "date" && (
-                <Input placeholder={`${field.name}...`} type="date" />
-              )) ||
-              (field.type === "checkbox" && (
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" />
-                  <span>{field.name}</span>
-                </label>
-              ))}
-          </label>
-        </div>
-      ))}
     </div>
   )
 }
