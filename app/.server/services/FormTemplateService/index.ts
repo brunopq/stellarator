@@ -177,7 +177,11 @@ class FormTemplateService {
   async get(id: string): Promise<FormTemplateWithFields | undefined> {
     return await db.query.formTemplate.findFirst({
       where: (ft, { eq }) => eq(ft.id, id),
-      with: { formFields: true },
+      with: {
+        formFields: {
+          orderBy: (ff, { asc }) => [asc(ff.order)],
+        },
+      },
     })
   }
 

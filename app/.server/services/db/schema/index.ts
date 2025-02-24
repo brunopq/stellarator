@@ -87,9 +87,10 @@ export const formSubmission = pgTable("form_submissions", {
     .notNull()
     .references(() => formTemplate.id),
   submitterId: id().notNull() /*.references(() => user.id)*/,
-  submittedAt: timestamp({ withTimezone: true, mode: "date" })
+  createdAt: timestamp({ withTimezone: true, mode: "date" })
     .defaultNow()
     .notNull(),
+  submittedAt: timestamp({ withTimezone: true, mode: "date" }),
 })
 
 export const formSubmissionRelations = relations(

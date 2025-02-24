@@ -12,9 +12,9 @@ export default [
       index("routes/formTemplates.tsx"),
       route("edit/:id", "routes/editFormTemplate.tsx"),
     ]),
-    ...prefix("submissions", [
-      index("routes/submissions.tsx"),
-      route("fill/:id", "routes/fillForm.tsx"),
+    ...prefix("fichas", [
+      index("routes/fichas.tsx"),
+      route("edit/:id", "routes/fillForm.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig

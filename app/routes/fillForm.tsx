@@ -1,92 +1,109 @@
 import type { Route } from "./+types/fillForm"
 import { redirect } from "react-router"
-import { create, type UseBoundStore } from "zustand/react"
-import { combine } from "zustand/middleware"
-
-import FormTemplateService from "~/.server/services/FormTemplateService"
 
 import { FormTemplatePreview, type FillableFormField } from "~/components/Form"
 import type { StoreApi } from "zustand/vanilla"
+import FormSubmissionService, {
+  type FormSubmission,
+  type FormSubmissionWithFields,
+  type FullFormSubmission,
+} from "~/.server/services/FormSubmissionService"
+import { Button } from "~/components/ui/button"
+import type { FormTemplateWithFields } from "~/.server/services/FormTemplateService"
+import { createContext, useContext, type JSX } from "react"
 
 export async function loader({ params }: Route.LoaderArgs) {
   const id = params.id
 
-  const formTemplate = await FormTemplateService.get(id)
+  const formSubmission = await FormSubmissionService.get(id)
 
-  if (!formTemplate) {
+  if (!formSubmission) {
     throw redirect("/submissions")
   }
 
-  return formTemplate
+  return formSubmission
+}
+
+type EditSubmissionContext = {
+  formTemplate: FormTemplateWithFields
+  submission: FullFormSubmission
+}
+
+const editSubmissionContext = createContext<EditSubmissionContext | null>(null)
+
+function useEditSubmissionContext() {
+  const ctx = useContext(editSubmissionContext)
+
+  if (!ctx) {
+    throw new Error(
+      "`useEditSubmissionContext` should be used inside the `EditSubmissionContextProvider`",
+    )
+  }
+
+  return ctx
+}
+
+type EditSubmissionContextProviderProps = {
+  initialFormSubmission: Route.ComponentProps["loaderData"]
+  children: JSX.Element
+}
+
+function EditSubmissionContextProvider({
+  initialFormSubmission,
+  children,
+}: EditSubmissionContextProviderProps) {
+  return (
+    <editSubmissionContext.Provider
+      value={{
+        formTemplate: initialFormSubmission.formTemplate,
+        submission: initialFormSubmission,
+      }}
+    >
+      {children}
+    </editSubmissionContext.Provider>
+  )
 }
 
 export default function FillForm({ loaderData }: Route.ComponentProps) {
-  const store = create(
-    combine(
-      {
-        fields: loaderData.formFields.map((f) => ({
-          ...f,
-          value: "" as string | number | boolean,
-        })),
-      },
-      (set) => ({
-        setField: (fieldId: string, fieldData: Partial<FillableFormField>) =>
-          set((state) => ({
-            fields: state.fields.map((field) =>
-              field.id === fieldId ? { ...field, ...fieldData } : field,
-            ),
-          })),
-      }),
-    ),
-  )
-
   return (
     <div className="grid grid-cols-2 grid-rows-[auto_1fr] place-items-start gap-x-8 gap-y-6 rounded-xs border p-8 shadow-lg dark:border-primary-900/50 dark:bg-zinc-800">
-      <header className="col-span-2 flex items-center justify-between">
-        <h1 className="font-semibold text-2xl">
-          Preenchend ficha{" "}
-          <strong className="dark:text-primary-100">{loaderData.name}</strong>
-        </h1>
-      </header>
+      <EditSubmissionHeader />
 
-      <FilledFieldsPreview useFields={store} />
+      <FilledFieldsPreview />
 
-      <FormTemplatePreview useFields={store} />
+      {/*<FormTemplatePreview />*/}
     </div>
   )
 }
 
-type Write<T, U> = Omit<T, keyof U> & U
+function EditSubmissionHeader() {
+  const { formTemplate } = useEditSubmissionContext()
 
-type Store = UseBoundStore<
-  StoreApi<
-    Write<
-      {
-        fields: FillableFormField[]
-      },
-      {
-        setField: (
-          fieldId: string,
-          fieldData: Partial<FillableFormField>,
-        ) => void
-      }
-    >
-  >
->
-
-type FilledFieldsPreviewProps = {
-  useFields: Store
+  return (
+    <header className="col-span-2 flex items-center justify-between">
+      <h1 className="font-semibold text-2xl">
+        Preenchend ficha{" "}
+        <strong className="dark:text-primary-100">{formTemplate.name}</strong>
+      </h1>
+    </header>
+  )
 }
 
-function FilledFieldsPreview({ useFields }: FilledFieldsPreviewProps) {
-  const fields = useFields((state) => state.fields)
+function FilledFieldsPreview() {
+  const { submission } = useEditSubmissionContext()
 
   return (
     <div className="w-full space-y-4">
-      {fields.map((field) => (
+      {submission.formSubmissionFields.map((field) => (
         <div key={field.id} className="flex items-center space-x-2">
-          <span className="font-medium">{field.name}:</span>
-          <span>{field.value}</span>
+          <span className="font-medium">{field.formField.name}:</span>
+          <span>
+            {field.dateValue ||
+              field.checkboxValue ||
+              field.textValue ||
+              field.textareaValue ||
+              field.numberValue}
+          </span>
         </div>
       ))}
     </div>
