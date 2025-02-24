@@ -23,7 +23,7 @@ export const newFormFieldSchema = createInsertSchema(formField).omit({
 export type NewFormField = z.infer<typeof newFormFieldSchema>
 
 export const formTemplateWithFieldsSchema = formTemplateSchema.extend({
-  formFields: z.array(formFieldSchema),
+  formFields: z.array(formFieldSchema.extend({ id: z.string() })),
 })
 export type FormTemplateWithFields = z.infer<
   typeof formTemplateWithFieldsSchema
@@ -51,7 +51,13 @@ class FormTemplateService {
   async createTemplateField(newFormField: NewFormField): Promise<FormField> {
     const [createdFormField] = await db
       .insert(formField)
-      .values(newFormField)
+      .values({
+        formTemplateId: newFormField.formTemplateId,
+        name: newFormField.name,
+        order: newFormField.order,
+        required: newFormField.required,
+        type: newFormField.type,
+      })
       .returning()
 
     return createdFormField
@@ -71,9 +77,6 @@ class FormTemplateService {
   async syncFormTemplateAndFields(
     formTemplateWithFields: FormTemplateWithFields,
   ): Promise<FormTemplateWithFields> {
-    console.log("syncing!!!")
-    console.log(formTemplateWithFields)
-
     const updatedTemplate = await this.updateFormTemplate(
       formTemplateWithFields.id,
       {
@@ -81,8 +84,6 @@ class FormTemplateService {
         description: formTemplateWithFields.description,
       },
     )
-
-    console.log(updatedTemplate)
 
     const oldIds = new Set(
       (
@@ -93,24 +94,18 @@ class FormTemplateService {
       ).map(({ id }) => id),
     )
 
-    console.log("old ids: ")
-    console.log(oldIds)
-
     const updatedFields = await Promise.all(
       formTemplateWithFields.formFields.map((field) => {
         if (oldIds.has(field.id)) {
-          console.log(`Updating: ${field.id}`)
           oldIds.delete(field.id)
           return this.updateFormField(field.id, field)
         }
 
-        console.log(`Creating: ${field.id}`)
         return this.createTemplateField(field)
       }),
     )
 
     for (const fieldId of oldIds) {
-      console.log(`Deleting field ${fieldId}`)
       await this.deleteFormField(fieldId)
     }
 

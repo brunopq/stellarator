@@ -45,8 +45,6 @@ async function putAction(request: Request) {
 
   const updated = await FormTemplateService.syncFormTemplateAndFields(parsed)
 
-  console.log(updated)
-
   return updated
 }
 
@@ -104,8 +102,6 @@ function EditFormTemplateContextProvider({
   const [formTemplate, setFormTemplate] = useState(initialFormTemplate)
 
   function sync() {
-    console.log(formTemplate)
-
     syncFetcher.submit(formTemplate, {
       encType: "application/json",
       method: "PUT",
