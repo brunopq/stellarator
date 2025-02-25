@@ -1,10 +1,13 @@
 import type { Route } from "./+types/fillForm"
-import { redirect } from "react-router"
+import { redirect, useFetcher } from "react-router"
 import { createContext, useContext, useState, type JSX } from "react"
 import { AsteriskIcon } from "lucide-react"
 import { format } from "date-fns"
 
-import FormSubmissionService, {} from "~/.server/services/FormSubmissionService"
+import FormSubmissionService, {
+  syncFieldSchema,
+  type SyncField,
+} from "~/.server/services/FormSubmissionService"
 import type {
   FormFieldType,
   FormTemplateWithFields,
@@ -12,6 +15,8 @@ import type {
 
 import { Input } from "~/components/ui/input"
 import { Textarea } from "~/components/ui/textarea"
+import { Button } from "~/components/ui/button"
+import { z } from "zod"
 
 export async function loader({ params }: Route.LoaderArgs) {
   const id = params.id
@@ -23,6 +28,23 @@ export async function loader({ params }: Route.LoaderArgs) {
   }
 
   return formSubmission
+}
+
+export async function action({ request, params }: Route.ActionArgs) {
+  const submissionId = params.id
+
+  const json = await request.json()
+  console.log(json)
+
+  const parsed = z.array(syncFieldSchema).parse(json)
+  console.log(parsed)
+
+  const updated = await FormSubmissionService.syncSubmissionFields(
+    submissionId,
+    parsed,
+  )
+
+  return updated
 }
 
 type BaseFilledField = {
@@ -44,6 +66,8 @@ type FilledField = BaseFilledField &
 type EditSubmissionContext = {
   formTemplate: FormTemplateWithFields
   filledFormFields: FilledField[]
+
+  sync: () => void
 
   setFieldValue: (id: string, value: FilledField["value"]) => void
 }
@@ -71,8 +95,10 @@ function EditSubmissionContextProvider({
   initialFormSubmission,
   children,
 }: EditSubmissionContextProviderProps) {
+  const syncFetcher = useFetcher<typeof action>()
+
   const [formTemplate, _] = useState(initialFormSubmission.formTemplate)
-  const [filledFormFields, setFilledFormFields] = useState(
+  const [filledFormFields, setFilledFormFields] = useState<FilledField[]>(
     initialFormSubmission.formTemplate.formFields.map((field) => ({
       fieldName: field.name,
       fieldRequired: field.required,
@@ -82,11 +108,65 @@ function EditSubmissionContextProvider({
     })),
   )
 
+  const toPersistance = (field: FilledField): SyncField => {
+    const syncField: SyncField = {
+      formFieldId: field.templateFieldId,
+      formSubmissionId: initialFormSubmission.id,
+    }
+
+    if (!field.value) return syncField
+
+    switch (field.type) {
+      case "text":
+        syncField.textValue = field.value
+        break
+      case "textarea":
+        syncField.textareaValue = field.value
+        break
+      case "number":
+        syncField.numberValue = field.value
+        break
+      case "date":
+        syncField.dateValue = field.value?.toISOString()
+        break
+      case "checkbox":
+        syncField.checkboxValue = field.value
+        break
+    }
+
+    return syncField
+  }
+
+  const sync = () => {
+    const payload = filledFormFields.map(toPersistance)
+    syncFetcher.submit(payload, {
+      method: "POST",
+      encType: "application/json",
+    })
+  }
+
   const setFieldValue: EditSubmissionContext["setFieldValue"] = (id, value) => {
     setFilledFormFields((prev) =>
-      prev.map((field) =>
-        field.templateFieldId === id ? { ...field, value } : field,
-      ),
+      prev.map((field) => {
+        if (field.templateFieldId === id) {
+          if (
+            (field.type === "text" || field.type === "textarea") &&
+            typeof value === "string"
+          ) {
+            return { ...field, value }
+          }
+          if (field.type === "number" && typeof value === "number") {
+            return { ...field, value }
+          }
+          if (field.type === "date" && value instanceof Date) {
+            return { ...field, value }
+          }
+          if (field.type === "checkbox" && typeof value === "boolean") {
+            return { ...field, value }
+          }
+        }
+        return field
+      }),
     )
   }
 
@@ -95,6 +175,8 @@ function EditSubmissionContextProvider({
       value={{
         formTemplate,
         filledFormFields,
+
+        sync,
         setFieldValue,
       }}
     >
@@ -118,14 +200,16 @@ export default function FillForm({ loaderData }: Route.ComponentProps) {
 }
 
 function EditSubmissionHeader() {
-  const { formTemplate } = useEditSubmissionContext()
+  const { formTemplate, sync } = useEditSubmissionContext()
 
   return (
-    <header className="col-span-2 flex items-center justify-between">
+    <header className="col-span-2 flex w-full items-center justify-between">
       <h1 className="font-semibold text-2xl">
-        Preenchend ficha{" "}
+        Preenchendo ficha{" "}
         <strong className="dark:text-primary-100">{formTemplate.name}</strong>
       </h1>
+
+      <Button onClick={sync}>Salvar</Button>
     </header>
   )
 }
