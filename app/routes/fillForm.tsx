@@ -3,20 +3,21 @@ import { redirect, useFetcher } from "react-router"
 import { createContext, useContext, useState, type JSX } from "react"
 import { AsteriskIcon } from "lucide-react"
 import { format } from "date-fns"
+import { z } from "zod"
 
 import FormSubmissionService, {
   syncFieldSchema,
+  type FormSubmissionField,
   type SyncField,
 } from "~/.server/services/FormSubmissionService"
 import type {
-  FormFieldType,
+  FormField,
   FormTemplateWithFields,
 } from "~/.server/services/FormTemplateService"
 
 import { Input } from "~/components/ui/input"
 import { Textarea } from "~/components/ui/textarea"
 import { Button } from "~/components/ui/button"
-import { z } from "zod"
 
 export async function loader({ params }: Route.LoaderArgs) {
   const id = params.id
@@ -34,10 +35,8 @@ export async function action({ request, params }: Route.ActionArgs) {
   const submissionId = params.id
 
   const json = await request.json()
-  console.log(json)
 
   const parsed = z.array(syncFieldSchema).parse(json)
-  console.log(parsed)
 
   const updated = await FormSubmissionService.syncSubmissionFields(
     submissionId,
@@ -85,6 +84,54 @@ function useEditSubmissionContext() {
 
   return ctx
 }
+const toDomain = (
+  submissionField: FormSubmissionField,
+  templateField: FormField,
+): FilledField => {
+  const baseField = {
+    fieldName: templateField.name,
+    fieldRequired: templateField.required,
+    order: templateField.order,
+    templateFieldId: submissionField.formFieldId,
+  }
+
+  if (templateField.type === "checkbox") {
+    return {
+      ...baseField,
+      type: "checkbox",
+      value: submissionField.checkboxValue ?? undefined,
+    }
+  }
+  if (templateField.type === "date") {
+    return {
+      ...baseField,
+      type: "date",
+      value: submissionField.dateValue ?? undefined,
+    }
+  }
+  if (templateField.type === "number") {
+    return {
+      ...baseField,
+      type: "number",
+      value: submissionField.numberValue ?? undefined,
+    }
+  }
+  if (templateField.type === "text") {
+    return {
+      ...baseField,
+      type: "text",
+      value: submissionField.textValue ?? undefined,
+    }
+  }
+  if (templateField.type === "textarea") {
+    return {
+      ...baseField,
+      type: "textarea",
+      value: submissionField.textareaValue ?? undefined,
+    }
+  }
+  throw new Error("unreachable")
+}
 
 type EditSubmissionContextProviderProps = {
   initialFormSubmission: Route.ComponentProps["loaderData"]
@@ -99,19 +146,34 @@ function EditSubmissionContextProvider({
 
   const [formTemplate, _] = useState(initialFormSubmission.formTemplate)
   const [filledFormFields, setFilledFormFields] = useState<FilledField[]>(
-    initialFormSubmission.formTemplate.formFields.map((field) => ({
-      fieldName: field.name,
-      fieldRequired: field.required,
-      order: field.order,
-      templateFieldId: field.id,
-      type: field.type,
-    })),
+    initialFormSubmission.formTemplate.formFields.map((templateField) => {
+      const submissionField = initialFormSubmission.formSubmissionFields.find(
+        (s) => s.formFieldId === templateField.id,
+      )
+
+      if (!submissionField) {
+        return {
+          fieldName: templateField.name,
+          fieldRequired: templateField.required,
+          order: templateField.order,
+          templateFieldId: templateField.id,
+          type: templateField.type,
+        }
+      }
+
+      return toDomain(submissionField, templateField)
+    }),
   )
 
   const toPersistance = (field: FilledField): SyncField => {
     const syncField: SyncField = {
       formFieldId: field.templateFieldId,
       formSubmissionId: initialFormSubmission.id,
+      checkboxValue: null,
+      dateValue: null,
+      numberValue: null,
+      textValue: null,
+      textareaValue: null,
     }
 
     if (!field.value) return syncField
@@ -127,7 +189,7 @@ function EditSubmissionContextProvider({
         syncField.numberValue = field.value
         break
       case "date":
-        syncField.dateValue = field.value?.toISOString()
+        syncField.dateValue = field.value
         break
       case "checkbox":
         syncField.checkboxValue = field.value
@@ -139,7 +201,7 @@ function EditSubmissionContextProvider({
 
   const sync = () => {
     const payload = filledFormFields.map(toPersistance)
-    syncFetcher.submit(payload, {
+    syncFetcher.submit(JSON.stringify(payload), {
       method: "POST",
       encType: "application/json",
     })
@@ -253,64 +315,6 @@ type FieldProps = {
   field: FilledField
 }
 function Field({ field }: FieldProps) {
-  const { setFieldValue } = useEditSubmissionContext()
-
-  const fieldTypeInputMap: Record<FormFieldType, JSX.Element> = {
-    text: (
-      <label>
-        <Input
-          onChange={(e) => setFieldValue(field.templateFieldId, e.target.value)}
-          type="text"
-          placeholder={`${field.fieldName}...`}
-        />
-      </label>
-    ),
-    number: (
-      <label>
-        <Input
-          onChange={(e) =>
-            setFieldValue(field.templateFieldId, e.target.valueAsNumber)
-          }
-          type="number"
-          placeholder={`${field.fieldName}...`}
-        />
-      </label>
-    ),
-    textarea: (
-      <label>
-        <Textarea
-          onChange={(e) => setFieldValue(field.templateFieldId, e.target.value)}
-          placeholder={`${field.fieldName}...`}
-        />
-      </label>
-    ),
-    date: (
-      <label>
-        <Input
-          onChange={(e) =>
-            setFieldValue(
-              field.templateFieldId,
-              e.target.valueAsDate ?? undefined,
-            )
-          }
-          type="date"
-          placeholder={`${field.fieldName}...`}
-        />
-      </label>
-    ),
-    checkbox: (
-      <label className="flex items-center gap-2">
-        <input
-          onChange={(e) =>
-            setFieldValue(field.templateFieldId, e.target.checked)
-          }
-          type="checkbox"
-        />
-        <span>{field.fieldName}</span>
-      </label>
-    ),
-  }
-
   return (
     <div className="">
       <strong className="-mb-0.5 relative inline-block text-sm text-zinc-700 dark:text-zinc-400">
@@ -322,7 +326,75 @@ function Field({ field }: FieldProps) {
         )}
       </strong>
 
-      {fieldTypeInputMap[field.type]}
+      <FieldInput field={field} />
     </div>
   )
+}
+
+function FieldInput({ field }: FieldProps) {
+  const { setFieldValue } = useEditSubmissionContext()
+
+  if (field.type === "text")
+    return (
+      <label>
+        <Input
+          onChange={(e) => setFieldValue(field.templateFieldId, e.target.value)}
+          type="text"
+          placeholder={`${field.fieldName}...`}
+          value={field.value}
+        />
+      </label>
+    )
+  if (field.type === "number")
+    return (
+      <label>
+        <Input
+          onChange={(e) =>
+            setFieldValue(field.templateFieldId, e.target.valueAsNumber)
+          }
+          type="number"
+          placeholder={`${field.fieldName}...`}
+          value={field.value}
+        />
+      </label>
+    )
+  if (field.type === "textarea")
+    return (
+      <label>
+        <Textarea
+          onChange={(e) => setFieldValue(field.templateFieldId, e.target.value)}
+          placeholder={`${field.fieldName}...`}
+          value={field.value}
+        />
+      </label>
+    )
+  if (field.type === "date")
+    return (
+      <label>
+        <Input
+          onChange={(e) =>
+            setFieldValue(
+              field.templateFieldId,
+              e.target.valueAsDate ?? undefined,
+            )
+          }
+          type="date"
+          placeholder={`${field.fieldName}...`}
+          value={field.value && format(field.value, "yyyy-MM-dd")}
+        />
+      </label>
+    )
+  if (field.type === "checkbox")
+    return (
+      <label className="flex items-center gap-2">
+        <input
+          onChange={(e) =>
+            setFieldValue(field.templateFieldId, e.target.checked)
+          }
+          checked={field.value}
+          type="checkbox"
+        />
+        <span>{field.fieldName}</span>
+      </label>
+    )
 }

@@ -15,6 +15,13 @@
       "when": 1740417017073,
       "tag": "0001_round_misty_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1740575519113,
+      "tag": "0002_tearful_nicolaos",
+      "breakpoints": true
     }
   ]
 }

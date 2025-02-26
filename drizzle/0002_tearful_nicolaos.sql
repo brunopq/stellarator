@@ -1,0 +1,1 @@
+ALTER TABLE "form_submission_fields" ADD CONSTRAINT "only_one_submission_per_field" UNIQUE("form_field_id","form_submission_id");

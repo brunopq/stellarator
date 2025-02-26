@@ -9,6 +9,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   type PgColumnBuilderBase,
 } from "drizzle-orm/pg-core"
 
@@ -46,10 +47,7 @@ const formFieldTypesArray = [
 ] as const
 type FormFieldTypes = (typeof formFieldTypesArray)[number]
 
-const formFieldTypesAndValues: Record<
-  `${FormFieldTypes}Value`,
-  PgColumnBuilderBase
-> = {
+const formFieldTypesAndValues = {
   textValue: text(),
   textareaValue: text(),
   numberValue: integer(),
@@ -57,7 +55,7 @@ const formFieldTypesAndValues: Record<
   checkboxValue: boolean(),
   // radioValue: text(),
   // selectValue: text(),
-} as const
+} satisfies Record<`${FormFieldTypes}Value`, PgColumnBuilderBase>
 
 export const formFieldTypes = pgEnum("form_field_types", formFieldTypesArray)
 
@@ -122,6 +120,10 @@ export const formSubmissionFields = pgTable(
     ...formFieldTypesAndValues,
   },
   (table) => [
+    unique("only_one_submission_per_field").on(
+      table.formFieldId,
+      table.formSubmissionId,
+    ),
     check(
       "only_one_field_value_check",
       sql`(

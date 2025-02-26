@@ -1,0 +1,286 @@
+{
+  "id": "e70fa8db-bfad-43f6-8c58-9a24058c81fc",
+  "prevId": "0665ddef-e519-4d6e-96eb-ce70037f43df",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.form_fields": {
+      "name": "form_fields",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "char(12)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "form_template_id": {
+          "name": "form_template_id",
+          "type": "char(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "required": {
+          "name": "required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "form_field_types",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "order": {
+          "name": "order",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "form_fields_form_template_id_form_templates_id_fk": {
+          "name": "form_fields_form_template_id_form_templates_id_fk",
+          "tableFrom": "form_fields",
+          "tableTo": "form_templates",
+          "columnsFrom": [
+            "form_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.form_submissions": {
+      "name": "form_submissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "char(12)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "form_template_id": {
+          "name": "form_template_id",
+          "type": "char(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submitter_id": {
+          "name": "submitter_id",
+          "type": "char(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "form_submissions_form_template_id_form_templates_id_fk": {
+          "name": "form_submissions_form_template_id_form_templates_id_fk",
+          "tableFrom": "form_submissions",
+          "tableTo": "form_templates",
+          "columnsFrom": [
+            "form_template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.form_submission_fields": {
+      "name": "form_submission_fields",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "char(12)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "form_submission_id": {
+          "name": "form_submission_id",
+          "type": "char(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "form_field_id": {
+          "name": "form_field_id",
+          "type": "char(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text_value": {
+          "name": "text_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "textarea_value": {
+          "name": "textarea_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "number_value": {
+          "name": "number_value",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_value": {
+          "name": "date_value",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checkbox_value": {
+          "name": "checkbox_value",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "form_submission_fields_form_submission_id_form_submissions_id_fk": {
+          "name": "form_submission_fields_form_submission_id_form_submissions_id_fk",
+          "tableFrom": "form_submission_fields",
+          "tableTo": "form_submissions",
+          "columnsFrom": [
+            "form_submission_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "form_submission_fields_form_field_id_form_fields_id_fk": {
+          "name": "form_submission_fields_form_field_id_form_fields_id_fk",
+          "tableFrom": "form_submission_fields",
+          "tableTo": "form_fields",
+          "columnsFrom": [
+            "form_field_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "only_one_submission_per_field": {
+          "name": "only_one_submission_per_field",
+          "nullsNotDistinct": false,
+          "columns": [
+            "form_field_id",
+            "form_submission_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "only_one_field_value_check": {
+          "name": "only_one_field_value_check",
+          "value": "(\n        CASE WHEN \"form_submission_fields\".\"text_value\" IS NOT NULL THEN 1 ELSE 0 END + \n        CASE WHEN \"form_submission_fields\".\"number_value\" IS NOT NULL THEN 1 ELSE 0 END + \n        CASE WHEN \"form_submission_fields\".\"textarea_value\" IS NOT NULL THEN 1 ELSE 0 END + \n        CASE WHEN \"form_submission_fields\".\"checkbox_value\" IS NOT NULL THEN 1 ELSE 0 END + \n        CASE WHEN \"form_submission_fields\".\"date_value\" IS NOT NULL THEN 1 ELSE 0 END\n      ) = 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.form_templates": {
+      "name": "form_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "char(12)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.form_field_types": {
+      "name": "form_field_types",
+      "schema": "public",
+      "values": [
+        "text",
+        "textarea",
+        "number",
+        "date",
+        "checkbox"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
