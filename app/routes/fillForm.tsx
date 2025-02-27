@@ -176,7 +176,7 @@ function EditSubmissionContextProvider({
       textareaValue: null,
     }
 
-    if (!field.value) return syncField
+    if (field.value === undefined) return syncField
 
     switch (field.type) {
       case "text":
@@ -282,17 +282,21 @@ function FilledFieldsPreview() {
   return (
     <div className="w-full space-y-4">
       {filledFormFields.map((field) => (
-        <div
-          key={field.templateFieldId}
-          className="flex items-center space-x-2"
-        >
-          <span className="font-medium">{field.fieldName}:</span>
-          <span>
-            {field.value &&
-              (field.type === "date"
-                ? format(field.value, "dd/MM/yyyy")
-                : field.value)}
+        <div key={field.templateFieldId} className="">
+          <span className="font-semibold text-zinc-300">
+            {field.fieldName}:{" "}
           </span>
+          {field.value !== undefined && (
+            <span className="text-zinc-50">
+              {field.type === "date"
+                ? format(field.value, "dd/MM/yyyy")
+                : field.type === "checkbox"
+                  ? field.value
+                    ? "Sim"
+                    : "Não"
+                  : field.value}
+            </span>
+          )}
         </div>
       ))}
     </div>
@@ -303,7 +307,7 @@ function FormFields() {
   const { filledFormFields } = useEditSubmissionContext()
 
   return (
-    <div>
+    <div className="w-full space-y-4">
       {filledFormFields.map((field) => (
         <Field key={field.templateFieldId} field={field} />
       ))}
