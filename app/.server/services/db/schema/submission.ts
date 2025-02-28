@@ -1,3 +1,5 @@
+import { createSelectSchema, createInsertSchema } from "drizzle-zod"
+import type { z } from "zod"
 import {
   boolean,
   check,
@@ -9,12 +11,12 @@ import {
   unique,
   type PgColumnBuilderBase,
 } from "drizzle-orm/pg-core"
+import { relations, sql } from "drizzle-orm"
 
 import { baseTable, id } from "./utils"
 
 import { template, templateField } from "./template"
 import type { FieldType } from "./fieldType"
-import { relations, sql } from "drizzle-orm"
 
 export const submission = pgTable("submissions", {
   ...baseTable,
@@ -27,6 +29,24 @@ export const submission = pgTable("submissions", {
     .notNull(),
   submittedAt: timestamp({ withTimezone: true, mode: "date" }),
 })
+
+export const submissionRelations = relations(submission, ({ one, many }) => ({
+  template: one(template, {
+    fields: [submission.templateId],
+    references: [template.id],
+  }),
+  // submitter: one("users", {
+  //   fields: [formSubmission.submitterId],
+  //   references: ["id"],
+  // }),
+  submittedFields: many(submittedField),
+}))
+
+export const submissionSchema = createSelectSchema(submission)
+export const newSubmissionSchema = createInsertSchema(submission)
+
+export type Submission = z.infer<typeof submissionSchema>
+export type NewSubmission = z.infer<typeof newSubmissionSchema>
 
 // using this object ensures that we fill all the possible types
 const submittedFieldValues = {
@@ -70,18 +90,6 @@ export const submittedField = pgTable(
   ],
 )
 
-export const submissionRelations = relations(submission, ({ one, many }) => ({
-  template: one(template, {
-    fields: [submission.templateId],
-    references: [template.id],
-  }),
-  // submitter: one("users", {
-  //   fields: [formSubmission.submitterId],
-  //   references: ["id"],
-  // }),
-  submittedFields: many(submittedField),
-}))
-
 export const submittedFieldRelations = relations(submittedField, ({ one }) => ({
   submission: one(submission, {
     fields: [submittedField.submissionId],
@@ -92,3 +100,9 @@ export const submittedFieldRelations = relations(submittedField, ({ one }) => ({
     references: [templateField.id],
   }),
 }))
+
+export const submittedFieldSchema = createSelectSchema(submittedField)
+export const newSubmittedFieldSchema = createInsertSchema(submittedField)
+
+export type SubmittedField = z.infer<typeof submittedFieldSchema>
+export type NewSubmittedField = z.infer<typeof newSubmittedFieldSchema>

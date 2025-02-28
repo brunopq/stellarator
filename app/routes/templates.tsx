@@ -1,10 +1,10 @@
-import type { Route } from "./+types/formTemplates"
+import type { Route } from "./+types/templates"
 import { Form, Link, redirect } from "react-router"
 
 import FormTemplateService, {
   type FormTemplate,
   type FormField,
-} from "~/.server/services/FormTemplateService"
+} from "~/.server/services/TemplateService"
 
 import { Button } from "~/components/ui/button"
 

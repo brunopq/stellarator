@@ -3,7 +3,7 @@ import { AsteriskIcon } from "lucide-react"
 import type {
   FormField,
   FormFieldType,
-} from "~/.server/services/FormTemplateService"
+} from "~/.server/services/TemplateService"
 
 import { Input } from "../ui/input"
 import { Textarea } from "../ui/textarea"

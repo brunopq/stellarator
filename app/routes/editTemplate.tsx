@@ -20,7 +20,7 @@ import FormTemplateService, {
   type FormField,
   type FormFieldType,
   type FormTemplateWithFields,
-} from "~/.server/services/FormTemplateService"
+} from "~/.server/services/TemplateService"
 
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"

@@ -9,11 +9,11 @@ import FormSubmissionService, {
   syncFieldSchema,
   type FormSubmissionField,
   type SyncField,
-} from "~/.server/services/FormSubmissionService"
+} from "~/.server/services/SubmissionService"
 import type {
   FormField,
   FormTemplateWithFields,
-} from "~/.server/services/FormTemplateService"
+} from "~/.server/services/TemplateService"
 
 import { Input } from "~/components/ui/input"
 import { Textarea } from "~/components/ui/textarea"

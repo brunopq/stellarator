@@ -1,8 +1,8 @@
 import { Form, Link, redirect } from "react-router"
 import type { Route } from "./+types/fichas"
 
-import FormTemplateService from "~/.server/services/FormTemplateService"
-import FormSubmissionService from "~/.server/services/FormSubmissionService"
+import FormTemplateService from "~/.server/services/TemplateService"
+import FormSubmissionService from "~/.server/services/SubmissionService"
 
 import { Button } from "~/components/ui/button"
 

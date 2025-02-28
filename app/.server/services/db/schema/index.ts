@@ -1,9 +1,25 @@
-import * as templateSchema from "./template"
-import * as submissionSchema from "./submission"
-import * as fieldTypeSchema from "./fieldType"
+import {
+  template,
+  templateRelations,
+  templateField,
+  templateFieldRelations,
+} from "./template"
+import {
+  submission,
+  submissionRelations,
+  submittedField,
+  submittedFieldRelations,
+} from "./submission"
+import { fieldTypes } from "./fieldType"
 
-export default {
-  ...templateSchema,
-  ...submissionSchema,
-  ...fieldTypeSchema,
+export {
+  template,
+  templateRelations,
+  templateField,
+  templateFieldRelations,
+  submission,
+  submissionRelations,
+  submittedField,
+  submittedFieldRelations,
+  fieldTypes,
 }

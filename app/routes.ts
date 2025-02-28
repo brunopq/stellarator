@@ -8,9 +8,9 @@ import {
 
 export default [
   layout("layouts/maxWidth.tsx", [
-    ...prefix("form-templates", [
-      index("routes/formTemplates.tsx"),
-      route("edit/:id", "routes/editFormTemplate.tsx"),
+    ...prefix("templates", [
+      index("routes/templates.tsx"),
+      route("edit/:id", "routes/editTemplate.tsx"),
     ]),
     ...prefix("fichas", [
       index("routes/fichas.tsx"),
