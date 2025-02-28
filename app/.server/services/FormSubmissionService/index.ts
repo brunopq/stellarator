@@ -64,7 +64,7 @@ class FormSubmissionService {
     let truthyCount = 0
 
     for (const key of checkKeys) {
-      if (submissionField[key]) {
+      if (submissionField[key] !== null) {
         truthyCount++
       }
     }
