@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import type {
   NewTemplate,
@@ -11,7 +11,7 @@ import { submission, template, templateField } from "../db/schema"
 import { db } from "../db"
 
 export type TemplateWithFields = Template & {
-  templateFields: TemplateField[]
+  fields: TemplateField[]
 }
 export type NewTemplateWithFields = NewTemplate & {
   fields: NewTemplateField[]
@@ -21,12 +21,14 @@ class TemplateService {
   async listTemplates() {
     return await db.query.template.findMany({
       extras: {
-        fieldCount: db
-          .$count(templateField, eq(templateField.templateId, template.id))
-          .as("fieldCount"),
-        submissionCount: db
-          .$count(submission, eq(submission.templateId, template.id))
-          .as("submissionCount"),
+        fieldCount:
+          sql<number>`(select count(*) from ${templateField} where ${templateField.templateId} = ${template.id})`.as(
+            "field_count",
+          ),
+        submissionCount:
+          sql<number>`(select count(*) from ${submission} where ${submission.templateId} = ${template.id})`.as(
+            "submission_count",
+          ),
       },
     })
   }
@@ -128,7 +130,7 @@ class TemplateService {
 
     return {
       ...createdTemplate,
-      templateFields: createdTemplateFields,
+      fields: createdTemplateFields,
     }
   }
 
@@ -154,7 +156,7 @@ class TemplateService {
     )
 
     const updatedFields = await Promise.all(
-      templateWithFields.templateFields.map((field) => {
+      templateWithFields.fields.map((field) => {
         if (oldIds.has(field.id)) {
           oldIds.delete(field.id)
           return this.updateTemplateField(field.id, field)
@@ -170,7 +172,7 @@ class TemplateService {
 
     return {
       ...updatedTemplate,
-      templateFields: updatedFields,
+      fields: updatedFields,
     }
   }
 }

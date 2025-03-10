@@ -1,9 +1,8 @@
-import type { Route } from "./+types/editFormTemplate"
+import type { Route } from "./+types/index"
 import { createContext, memo, useContext, useState, type JSX } from "react"
 import { Select } from "radix-ui"
 import { redirect, useFetcher } from "react-router"
 import {
-  AsteriskIcon,
   CalendarFoldIcon,
   CheckCircle2Icon,
   CheckIcon,
@@ -15,35 +14,42 @@ import {
   Trash2Icon,
 } from "lucide-react/icons"
 
-import FormTemplateService, {
-  formTemplateWithFieldsSchema,
-  type FormField,
-  type FormFieldType,
-  type FormTemplateWithFields,
+import TemplateService, {
+  type TemplateWithFields,
 } from "~/.server/services/TemplateService"
 
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
-import { Textarea } from "~/components/ui/textarea"
-import { FormTemplatePreview } from "~/components/Form"
 import { createMatcher } from "~/utils/actionMatcher"
+import type { FieldType } from "~/.server/services/db/schema/fieldType"
+import {
+  templateFieldSchema,
+  templateSchema,
+  type TemplateField,
+} from "~/.server/services/db/schema/template"
+import { z } from "zod"
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const formTemplateId = params.id
+  const templateId = params.id
 
-  const formTemplate = await FormTemplateService.get(formTemplateId)
+  const template = await TemplateService.getTemplate(templateId)
 
-  if (!formTemplate) throw redirect("/form-template")
+  if (!template) throw redirect("/templates")
 
-  return { formTemplate }
+  return { template }
 }
+
+const templateWithFieldsSchema = templateSchema.extend({
+  // remove the id length constraint
+  fields: z.array(templateFieldSchema.extend({ id: z.string() })),
+})
 
 async function putAction(request: Request) {
   const json = await request.json()
 
-  const parsed = formTemplateWithFieldsSchema.parse(json)
+  const parsed = templateWithFieldsSchema.parse(json)
 
-  const updated = await FormTemplateService.syncFormTemplateAndFields(parsed)
+  const updated = await TemplateService.syncTemplateAndFields(parsed)
 
   return updated
 }
@@ -58,8 +64,8 @@ export async function action({ request }: Route.ActionArgs) {
   return match
 }
 
-type EditFormTemplateContext = {
-  formTemplate: FormTemplateWithFields
+type EditTemplateContext = {
+  template: TemplateWithFields
 
   sync: () => void
 
@@ -67,65 +73,63 @@ type EditFormTemplateContext = {
   setDescription: (description: string) => void
   addField: () => void
   setFieldName: (id: string, name: string) => void
-  setFieldType: (id: string, type: FormFieldType) => void
+  setFieldType: (id: string, type: FieldType) => void
   setFieldRequired: (id: string, required: boolean) => void
   removeField: (id: string) => void
 }
 
-const editFormTemplateContext = createContext<EditFormTemplateContext | null>(
-  null,
-)
+const editTemplateContext = createContext<EditTemplateContext | null>(null)
 
-function useEditFormTemplateContext() {
-  const ctx = useContext(editFormTemplateContext)
+function useEditTemplateContext() {
+  const ctx = useContext(editTemplateContext)
 
   if (!ctx) {
     throw new Error(
-      "`useEditFormTemplateContext` should be used inside the `EditFormTemplateContextProvider`",
+      "`useEditTemplateContext` should be used inside the `EditTemplateContextProvider`",
     )
   }
 
   return ctx
 }
 
-type EditFormTemplateContextProviderProps = {
+type EditTemplateContextProviderProps = {
   children: JSX.Element
-  initialFormTemplate: FormTemplateWithFields
+  initialTemplate: TemplateWithFields
 }
 
-function EditFormTemplateContextProvider({
+function EditTemplateContextProvider({
   children,
-  initialFormTemplate,
-}: EditFormTemplateContextProviderProps) {
+  initialTemplate,
+}: EditTemplateContextProviderProps) {
   const syncFetcher = useFetcher<typeof action>()
 
-  const [formTemplate, setFormTemplate] = useState(initialFormTemplate)
+  const [template, setTemplate] = useState(initialTemplate)
 
   function sync() {
-    syncFetcher.submit(formTemplate, {
+    syncFetcher.submit(template, {
       encType: "application/json",
       method: "PUT",
     })
   }
 
   function setName(name: string) {
-    setFormTemplate((prev) => ({ ...prev, name }))
+    setTemplate((prev) => ({ ...prev, name }))
   }
 
   function setDescription(description: string) {
-    setFormTemplate((prev) => ({ ...prev, description }))
+    setTemplate((prev) => ({ ...prev, description }))
   }
 
   function addField() {
-    setFormTemplate((prev) => ({
+    setTemplate((prev) => ({
       ...prev,
-      formFields: [
-        ...prev.formFields,
+      fields: [
+        ...prev.fields,
         {
-          formTemplateId: prev.id,
+          templateId: prev.id,
           id: String(Math.random()),
           name: "Campo novo",
-          order: prev.formFields.length,
+          order: prev.fields.length,
           required: false,
           type: "text",
         },
@@ -134,43 +138,37 @@ function EditFormTemplateContextProvider({
   }
 
   function setFieldName(id: string, name: string) {
-    setFormTemplate((prev) => ({
+    setTemplate((prev) => ({
       ...prev,
-      formFields: prev.formFields.map((f) =>
-        f.id === id ? { ...f, name } : f,
-      ),
+      fields: prev.fields.map((f) => (f.id === id ? { ...f, name } : f)),
     }))
   }
 
-  function setFieldType(id: string, type: FormFieldType) {
-    setFormTemplate((prev) => ({
+  function setFieldType(id: string, type: FieldType) {
+    setTemplate((prev) => ({
       ...prev,
-      formFields: prev.formFields.map((f) =>
-        f.id === id ? { ...f, type } : f,
-      ),
+      fields: prev.fields.map((f) => (f.id === id ? { ...f, type } : f)),
     }))
   }
 
   function setFieldRequired(id: string, required: boolean) {
-    setFormTemplate((prev) => ({
+    setTemplate((prev) => ({
       ...prev,
-      formFields: prev.formFields.map((f) =>
-        f.id === id ? { ...f, required } : f,
-      ),
+      fields: prev.fields.map((f) => (f.id === id ? { ...f, required } : f)),
     }))
   }
 
   function removeField(id: string) {
-    setFormTemplate((prev) => ({
+    setTemplate((prev) => ({
       ...prev,
-      formFields: prev.formFields.filter((f) => f.id !== id),
+      fields: prev.fields.filter((f) => f.id !== id),
     }))
   }
 
   return (
-    <editFormTemplateContext.Provider
+    <editTemplateContext.Provider
       value={{
-        formTemplate,
+        template,
 
         sync,
 
@@ -184,33 +182,33 @@ function EditFormTemplateContextProvider({
       }}
     >
       {children}
-    </editFormTemplateContext.Provider>
+    </editTemplateContext.Provider>
   )
 }
 
-export default function EditFormTemplate({ loaderData }: Route.ComponentProps) {
-  const { formTemplate } = loaderData
+export default function EditTemplate({ loaderData }: Route.ComponentProps) {
+  const { template } = loaderData
 
   return (
-    <EditFormTemplateContextProvider initialFormTemplate={formTemplate}>
+    <EditTemplateContextProvider initialTemplate={{ ...template }}>
       <div /*className="rounded-xs border p-8 shadow-lg dark:border-primary-900/50 dark:bg-zinc-800"*/
       >
-        <EditFormTemplateHeader />
+        <EditTemplateHeader />
 
         <div>
-          <EditFormTemplateInfo />
+          <EditTemplateInfo />
 
           <div className="mt-4">
             <Fields />
           </div>
         </div>
       </div>
-    </EditFormTemplateContextProvider>
+    </EditTemplateContextProvider>
   )
 }
 
-function EditFormTemplateHeader() {
-  const { sync } = useEditFormTemplateContext()
+function EditTemplateHeader() {
+  const { sync } = useEditTemplateContext()
 
   return (
     <header className="mb-8 flex items-center justify-between">
@@ -221,15 +219,15 @@ function EditFormTemplateHeader() {
   )
 }
 
-function EditFormTemplateInfo() {
-  const { formTemplate, setName, setDescription } = useEditFormTemplateContext()
+function EditTemplateInfo() {
+  const { template, setName, setDescription } = useEditTemplateContext()
 
   return (
     <div className="grid grid-cols-2 gap-4">
       <label>
         <span>Nome</span>
         <Input
-          value={formTemplate.name}
+          value={template.name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nome..."
           type="text"
@@ -239,7 +237,7 @@ function EditFormTemplateInfo() {
       <label>
         <span>Descrição</span>
         <Input
-          value={formTemplate.description || ""}
+          value={template.description || ""}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Descição..."
           type="text"
@@ -249,10 +247,10 @@ function EditFormTemplateInfo() {
   )
 }
 
-type PartialFormField = Omit<FormField, "formTemplateId">
+type PartialTemplateField = Omit<TemplateField, "templateId">
 
 const Fields = memo(() => {
-  const { formTemplate, addField } = useEditFormTemplateContext()
+  const { template, addField } = useEditTemplateContext()
 
   return (
     <div className="grid grid-cols-2 gap-12">
@@ -260,7 +258,7 @@ const Fields = memo(() => {
         <h3 className="mb-4 font-semibold text-xl">Campos</h3>
 
         <div className="space-y-4">
-          {formTemplate.formFields.map((field) => (
+          {template.fields.map((field) => (
             <Field key={field.id} field={field} />
           ))}
         </div>
@@ -279,10 +277,10 @@ const Fields = memo(() => {
   )
 })
 
-type FieldProps = { field: FormField }
+type FieldProps = { field: TemplateField }
 
 const Field = memo(({ field }: FieldProps) => {
-  const { setFieldRequired, removeField } = useEditFormTemplateContext()
+  const { setFieldRequired, removeField } = useEditTemplateContext()
 
   return (
     <div className="grid max-w-md grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 overflow-hidden rounded-sm border border-zinc-300 px-2 py-1 shadow-sm dark:border-zinc-800">
@@ -329,7 +327,7 @@ const Field = memo(({ field }: FieldProps) => {
   )
 })
 
-const typeMap: Record<FormField["type"], JSX.Element> = {
+const typeMap: Record<TemplateField["type"], JSX.Element> = {
   text: (
     <div className="flex items-center gap-2">
       <span>Texto</span>
@@ -364,15 +362,15 @@ const typeMap: Record<FormField["type"], JSX.Element> = {
 
 type TypeSelectProps = {
   id: string
-  value: FormField["type"]
+  value: TemplateField["type"]
 }
 
 function TypeSelect({ id, value }: TypeSelectProps) {
-  const { setFieldType } = useEditFormTemplateContext()
+  const { setFieldType } = useEditTemplateContext()
 
   return (
     <Select.Root
-      onValueChange={(value) => setFieldType(id, value as FormField["type"])}
+      onValueChange={(value) => setFieldType(id, value as FieldType)}
       value={value}
     >
       <Select.Trigger className="group flex items-center justify-between gap-4 rounded-md px-2 py-0.5 outline-0 transition-colors hover:bg-zinc-300 focus-visible:bg-zinc-300 data-[state='open']:bg-zinc-300 dark:data-[state='open']:bg-zinc-800 dark:focus-visible:bg-zinc-800 dark:hover:bg-zinc-800">
@@ -408,7 +406,7 @@ type NameInputProps = {
 
 function NameInput({ id, name }: NameInputProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const { setFieldName } = useEditFormTemplateContext()
+  const { setFieldName } = useEditTemplateContext()
 
   if (!isEditing) {
     return (

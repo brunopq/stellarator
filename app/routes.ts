@@ -10,7 +10,7 @@ export default [
   layout("layouts/maxWidth.tsx", [
     ...prefix("templates", [
       index("routes/templates.tsx"),
-      route("edit/:id", "routes/editTemplate.tsx"),
+      route("edit/:id", "routes/editTemplate/index.tsx"),
     ]),
     ...prefix("fichas", [
       index("routes/fichas.tsx"),
