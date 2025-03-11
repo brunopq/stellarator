@@ -22,6 +22,7 @@ import { Input } from "~/components/ui/input"
 import { EditTemplateContextProvider, useEditTemplateContext } from "./context"
 import { action } from "./action"
 import { loader } from "./loader"
+import { FormField } from "~/components/Form/FormField"
 
 export { action, loader }
 
@@ -37,8 +38,20 @@ export default function EditTemplate({ loaderData }: Route.ComponentProps) {
         <div>
           <EditTemplateInfo />
 
-          <div className="mt-4 bg-red-500/10">
-            <Fields />
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="mb-4 font-semibold text-xl">Campos</h3>
+
+              <EditableFields />
+            </div>
+
+            <div className="min-w-0">
+              <h3 className="mb-4 font-semibold text-xl">Prévia</h3>
+
+              <div className="space-y-4">
+                <TemplatePreview />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -86,39 +99,26 @@ function EditTemplateInfo() {
   )
 }
 
-type PartialTemplateField = Omit<TemplateField, "templateId">
-
-const Fields = memo(() => {
+const EditableFields = memo(() => {
   const { template, addField } = useEditTemplateContext()
-
   return (
-    <div className="grid grid-cols-2 gap-12">
-      <div>
-        <h3 className="mb-4 font-semibold text-xl">Campos</h3>
-
-        <div className="space-y-4">
-          {template.fields.map((field) => (
-            <Field key={field.id} field={field} />
-          ))}
-        </div>
-
-        <Button className="mt-8" onClick={addField}>
-          Adicionar campo
-        </Button>
+    <>
+      <div className="space-y-4">
+        {template.fields.map((field) => (
+          <EditableField key={field.id} field={field} />
+        ))}
       </div>
 
-      <div className="min-w-0">
-        <h3 className="mb-4 font-semibold text-xl">Prévia</h3>
-
-        {/*<FormTemplatePreview fields={fields} />*/}
-      </div>
-    </div>
+      <Button className="mt-8" onClick={addField}>
+        Adicionar campo
+      </Button>
+    </>
   )
 })
 
 type FieldProps = { field: TemplateField }
 
-const Field = memo(({ field }: FieldProps) => {
+const EditableField = memo(({ field }: FieldProps) => {
   const { setFieldRequired, removeField } = useEditTemplateContext()
 
   return (
@@ -282,4 +282,16 @@ function NameInput({ id, name }: NameInputProps) {
       </button>
     </div>
   )
+}
+
+function TemplatePreview() {
+  const { template } = useEditTemplateContext()
+
+  return template.fields.map((field) => (
+    <FormField
+      key={field.id}
+      field={{ ...field, value: undefined }}
+      setFieldValue={() => {}}
+    />
+  ))
 }

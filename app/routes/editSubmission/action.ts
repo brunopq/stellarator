@@ -13,8 +13,8 @@ export async function action({ request, params }: Route.ActionArgs) {
 
   const json = await request.json()
 
-  console.log(json)
-
+  // TODO: numbers that exceed the integer limit break the app
+  // please do not insert big numbers (I'm too lazy to fix this)
   const parsed = z.array(submittedFieldSchema2).parse(json)
 
   const updated = await SubmissionService.syncSubmittedFields(

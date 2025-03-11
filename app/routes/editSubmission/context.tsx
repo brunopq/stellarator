@@ -6,16 +6,17 @@ import type { SubmittedField } from "~/.server/services/db/schema/submission"
 import type { TemplateField } from "~/.server/services/db/schema/template"
 import type { TemplateWithFields } from "~/.server/services/TemplateService"
 
+import type { FieldWithValue } from "~/components/Form/FormField"
+
 import type { action } from "./action"
-import type { FilledField } from "./types"
 
 type EditSubmissionContext = {
   template: TemplateWithFields
-  filledFormFields: FilledField[]
+  filledFormFields: FieldWithValue[]
 
   sync: () => void
 
-  setFieldValue: (id: string, value: FilledField["value"]) => void
+  setFieldValue: (id: string, value: FieldWithValue["value"]) => void
 }
 
 const editSubmissionContext = createContext<EditSubmissionContext | null>(null)
@@ -34,12 +35,9 @@ export function useEditSubmissionContext() {
 const toDomain = (
   submissionField: SubmittedField,
   templateField: TemplateField,
-): FilledField => {
-  const baseField = {
-    fieldName: templateField.name,
-    fieldRequired: templateField.required,
-    order: templateField.order,
-    templateFieldId: submissionField.templateFieldId,
+): FieldWithValue => {
+  const baseField: TemplateField = {
+    ...templateField,
   }
 
   if (templateField.type === "checkbox") {
@@ -92,29 +90,23 @@ export function EditSubmissionContextProvider({
   const syncFetcher = useFetcher<typeof action>()
 
   const [template, _] = useState(initialSubmission.template)
-  const [filledFormFields, setFilledFormFields] = useState<FilledField[]>(
+  const [filledFormFields, setFilledFormFields] = useState<FieldWithValue[]>(
     initialSubmission.template.fields.map((templateField) => {
       const submissionField = initialSubmission.submittedFields.find(
         (s) => s.templateFieldId === templateField.id,
       )
 
       if (!submissionField) {
-        return {
-          fieldName: templateField.name,
-          fieldRequired: templateField.required,
-          order: templateField.order,
-          templateFieldId: templateField.id,
-          type: templateField.type,
-        }
+        return { ...templateField, value: undefined }
       }
 
       return toDomain(submissionField, templateField)
     }),
   )
 
-  const toPersistance = (field: FilledField): SubmittedField => {
+  const toPersistance = (field: FieldWithValue): SubmittedField => {
     const syncField: SubmittedField = {
-      templateFieldId: field.templateFieldId,
+      templateFieldId: field.id,
       submissionId: initialSubmission.id,
       checkboxValue: null,
       dateValue: null,
@@ -157,7 +149,7 @@ export function EditSubmissionContextProvider({
   const setFieldValue: EditSubmissionContext["setFieldValue"] = (id, value) => {
     setFilledFormFields((prev) =>
       prev.map((field) => {
-        if (field.templateFieldId === id) {
+        if (field.id === id) {
           if (
             (field.type === "text" || field.type === "textarea") &&
             typeof value === "string"
