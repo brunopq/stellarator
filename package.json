@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bun react-router build",
-    "dev": "bun react-router dev",
+    "build": "bun --bun react-router build",
+    "dev": "bun --bun react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "generate": "bun --bun drizzle-kit generate",
     "typecheck": "react-router typegen && tsc"

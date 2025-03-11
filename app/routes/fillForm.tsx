@@ -5,40 +5,44 @@ import { AsteriskIcon } from "lucide-react"
 import { format } from "date-fns"
 import { z } from "zod"
 
-import FormSubmissionService, {
-  syncFieldSchema,
-  type FormSubmissionField,
-  type SyncField,
-} from "~/.server/services/SubmissionService"
-import type {
-  FormField,
-  FormTemplateWithFields,
-} from "~/.server/services/TemplateService"
+import SubmissionService from "~/.server/services/SubmissionService"
+import type { TemplateField } from "~/.server/services/db/schema/template"
 
 import { Input } from "~/components/ui/input"
 import { Textarea } from "~/components/ui/textarea"
 import { Button } from "~/components/ui/button"
+import type { TemplateWithFields } from "~/.server/services/TemplateService"
+import {
+  type SubmittedField,
+  submittedFieldSchema,
+} from "~/.server/services/db/schema/submission"
 
 export async function loader({ params }: Route.LoaderArgs) {
   const id = params.id
 
-  const formSubmission = await FormSubmissionService.get(id)
+  const submission = await SubmissionService.get(id)
 
-  if (!formSubmission) {
-    throw redirect("/submissions")
+  if (!submission) {
+    throw redirect("/fichas")
   }
 
-  return formSubmission
+  return submission
 }
+
+const submittedFieldSchema2 = submittedFieldSchema.extend({
+  dateValue: z.coerce.date({ coerce: true }).nullable(),
+})
 
 export async function action({ request, params }: Route.ActionArgs) {
   const submissionId = params.id
 
   const json = await request.json()
 
-  const parsed = z.array(syncFieldSchema).parse(json)
+  console.log(json)
 
-  const updated = await FormSubmissionService.syncSubmissionFields(
+  const parsed = z.array(submittedFieldSchema2).parse(json)
+
+  const updated = await SubmissionService.syncSubmittedFields(
     submissionId,
     parsed,
   )
@@ -63,7 +67,7 @@ type FilledField = BaseFilledField &
   )
 
 type EditSubmissionContext = {
-  formTemplate: FormTemplateWithFields
+  template: TemplateWithFields
   filledFormFields: FilledField[]
 
   sync: () => void
@@ -85,14 +89,14 @@ function useEditSubmissionContext() {
   return ctx
 }
 const toDomain = (
-  submissionField: FormSubmissionField,
-  templateField: FormField,
+  submissionField: SubmittedField,
+  templateField: TemplateField,
 ): FilledField => {
   const baseField = {
     fieldName: templateField.name,
     fieldRequired: templateField.required,
     order: templateField.order,
-    templateFieldId: submissionField.formFieldId,
+    templateFieldId: submissionField.templateFieldId,
   }
 
   if (templateField.type === "checkbox") {
@@ -134,21 +138,21 @@ const toDomain = (
 }
 
 type EditSubmissionContextProviderProps = {
-  initialFormSubmission: Route.ComponentProps["loaderData"]
+  initialSubmission: Route.ComponentProps["loaderData"]
   children: JSX.Element
 }
 
 function EditSubmissionContextProvider({
-  initialFormSubmission,
+  initialSubmission,
   children,
 }: EditSubmissionContextProviderProps) {
   const syncFetcher = useFetcher<typeof action>()
 
-  const [formTemplate, _] = useState(initialFormSubmission.formTemplate)
+  const [template, _] = useState(initialSubmission.template)
   const [filledFormFields, setFilledFormFields] = useState<FilledField[]>(
-    initialFormSubmission.formTemplate.formFields.map((templateField) => {
-      const submissionField = initialFormSubmission.formSubmissionFields.find(
-        (s) => s.formFieldId === templateField.id,
+    initialSubmission.template.fields.map((templateField) => {
+      const submissionField = initialSubmission.submittedFields.find(
+        (s) => s.templateFieldId === templateField.id,
       )
 
       if (!submissionField) {
@@ -165,10 +169,10 @@ function EditSubmissionContextProvider({
     }),
   )
 
-  const toPersistance = (field: FilledField): SyncField => {
-    const syncField: SyncField = {
-      formFieldId: field.templateFieldId,
-      formSubmissionId: initialFormSubmission.id,
+  const toPersistance = (field: FilledField): SubmittedField => {
+    const syncField: SubmittedField = {
+      templateFieldId: field.templateFieldId,
+      submissionId: initialSubmission.id,
       checkboxValue: null,
       dateValue: null,
       numberValue: null,
@@ -235,7 +239,7 @@ function EditSubmissionContextProvider({
   return (
     <editSubmissionContext.Provider
       value={{
-        formTemplate,
+        template,
         filledFormFields,
 
         sync,
@@ -249,7 +253,7 @@ function EditSubmissionContextProvider({
 
 export default function FillForm({ loaderData }: Route.ComponentProps) {
   return (
-    <EditSubmissionContextProvider initialFormSubmission={loaderData}>
+    <EditSubmissionContextProvider initialSubmission={loaderData}>
       <div className="grid grid-cols-2 grid-rows-[auto_1fr] place-items-start gap-x-8 gap-y-6 rounded-xs border p-8 shadow-lg dark:border-primary-900/50 dark:bg-zinc-800">
         <EditSubmissionHeader />
 
@@ -262,13 +266,13 @@ export default function FillForm({ loaderData }: Route.ComponentProps) {
 }
 
 function EditSubmissionHeader() {
-  const { formTemplate, sync } = useEditSubmissionContext()
+  const { template, sync } = useEditSubmissionContext()
 
   return (
     <header className="col-span-2 flex w-full items-center justify-between">
       <h1 className="font-semibold text-2xl">
         Preenchendo ficha{" "}
-        <strong className="dark:text-primary-100">{formTemplate.name}</strong>
+        <strong className="dark:text-primary-100">{template.name}</strong>
       </h1>
 
       <Button onClick={sync}>Salvar</Button>

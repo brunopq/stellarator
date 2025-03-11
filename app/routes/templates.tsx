@@ -11,9 +11,7 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const a = await TemplateService.listTemplates()
-  console.log(a)
-  return a
+  return await TemplateService.listTemplates()
 }
 
 export async function action({ request }: Route.ActionArgs) {

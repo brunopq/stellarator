@@ -21,14 +21,8 @@ class TemplateService {
   async listTemplates() {
     return await db.query.template.findMany({
       extras: {
-        fieldCount:
-          sql<number>`(select count(*) from ${templateField} where ${templateField.templateId} = ${template.id})`.as(
-            "field_count",
-          ),
-        submissionCount:
-          sql<number>`(select count(*) from ${submission} where ${submission.templateId} = ${template.id})`.as(
-            "submission_count",
-          ),
+        fieldCount: db.$count(templateField).as("field_count"),
+        submissionCount: db.$count(submission).as("submission_count"),
       },
     })
   }

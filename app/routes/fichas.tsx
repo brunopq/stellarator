@@ -1,14 +1,14 @@
 import { Form, Link, redirect } from "react-router"
 import type { Route } from "./+types/fichas"
 
-import FormTemplateService from "~/.server/services/TemplateService"
-import FormSubmissionService from "~/.server/services/SubmissionService"
+import TemplateService from "~/.server/services/TemplateService"
+import SubmissionService from "~/.server/services/SubmissionService"
 
 import { Button } from "~/components/ui/button"
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const templates = await FormTemplateService.list()
-  const userSubmissions = await FormSubmissionService.listByUser("123")
+  const templates = await TemplateService.listTemplates()
+  const userSubmissions = await SubmissionService.listByUser("123")
 
   return {
     templates,
@@ -18,14 +18,14 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData()
-  const formTemplateId = formData.get("formTemplateId")
+  const templateId = formData.get("templateId")
 
-  if (!formTemplateId || typeof formTemplateId !== "string") {
+  if (!templateId || typeof templateId !== "string") {
     return redirect("/fichas")
   }
 
-  const createdSumission = await FormSubmissionService.create({
-    formTemplateId,
+  const createdSumission = await SubmissionService.create({
+    templateId,
     submitterId: "123",
   })
 
@@ -53,7 +53,7 @@ export default function Fichas({ loaderData }: Route.ComponentProps) {
                 className="col-start-2 row-span-2 row-start-1"
                 method="POST"
               >
-                <Button name="formTemplateId" value={template.id} type="submit">
+                <Button name="templateId" value={template.id} type="submit">
                   Preencher
                 </Button>
               </Form>
