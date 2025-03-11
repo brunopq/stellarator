@@ -37,7 +37,7 @@ export default function EditTemplate({ loaderData }: Route.ComponentProps) {
         <div>
           <EditTemplateInfo />
 
-          <div className="mt-4">
+          <div className="mt-4 bg-red-500/10">
             <Fields />
           </div>
         </div>
