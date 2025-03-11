@@ -1,7 +1,6 @@
 import type { Route } from "./+types/index"
-import { createContext, memo, useContext, useState, type JSX } from "react"
+import { memo, useState, type JSX } from "react"
 import { Select } from "radix-ui"
-import { redirect, useFetcher } from "react-router"
 import {
   CalendarFoldIcon,
   CheckCircle2Icon,
@@ -14,177 +13,17 @@ import {
   Trash2Icon,
 } from "lucide-react/icons"
 
-import TemplateService, {
-  type TemplateWithFields,
-} from "~/.server/services/TemplateService"
+import type { FieldType } from "~/.server/services/db/schema/fieldType"
+import type { TemplateField } from "~/.server/services/db/schema/template"
 
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
-import { createMatcher } from "~/utils/actionMatcher"
-import type { FieldType } from "~/.server/services/db/schema/fieldType"
-import {
-  templateFieldSchema,
-  templateSchema,
-  type TemplateField,
-} from "~/.server/services/db/schema/template"
-import { z } from "zod"
 
-export async function loader({ params }: Route.LoaderArgs) {
-  const templateId = params.id
+import { EditTemplateContextProvider, useEditTemplateContext } from "./context"
+import { action } from "./action"
+import { loader } from "./loader"
 
-  const template = await TemplateService.getTemplate(templateId)
-
-  if (!template) throw redirect("/templates")
-
-  return { template }
-}
-
-const templateWithFieldsSchema = templateSchema.extend({
-  // remove the id length constraint
-  fields: z.array(templateFieldSchema.extend({ id: z.string() })),
-})
-
-async function putAction(request: Request) {
-  const json = await request.json()
-
-  const parsed = templateWithFieldsSchema.parse(json)
-
-  const updated = await TemplateService.syncTemplateAndFields(parsed)
-
-  return updated
-}
-
-export async function action({ request }: Route.ActionArgs) {
-  const matcher = createMatcher<Request>()({
-    PUT: putAction,
-  })
-
-  const match = await matcher(request.method, request)
-
-  return match
-}
-
-type EditTemplateContext = {
-  template: TemplateWithFields
-
-  sync: () => void
-
-  setName: (name: string) => void
-  setDescription: (description: string) => void
-  addField: () => void
-  setFieldName: (id: string, name: string) => void
-  setFieldType: (id: string, type: FieldType) => void
-  setFieldRequired: (id: string, required: boolean) => void
-  removeField: (id: string) => void
-}
-
-const editTemplateContext = createContext<EditTemplateContext | null>(null)
-
-function useEditTemplateContext() {
-  const ctx = useContext(editTemplateContext)
-
-  if (!ctx) {
-    throw new Error(
-      "`useEditTemplateContext` should be used inside the `EditTemplateContextProvider`",
-    )
-  }
-
-  return ctx
-}
-
-type EditTemplateContextProviderProps = {
-  children: JSX.Element
-  initialTemplate: TemplateWithFields
-}
-
-function EditTemplateContextProvider({
-  children,
-  initialTemplate,
-}: EditTemplateContextProviderProps) {
-  const syncFetcher = useFetcher<typeof action>()
-
-  const [template, setTemplate] = useState(initialTemplate)
-
-  function sync() {
-    syncFetcher.submit(template, {
-      encType: "application/json",
-      method: "PUT",
-    })
-  }
-
-  function setName(name: string) {
-    setTemplate((prev) => ({ ...prev, name }))
-  }
-
-  function setDescription(description: string) {
-    setTemplate((prev) => ({ ...prev, description }))
-  }
-
-  function addField() {
-    setTemplate((prev) => ({
-      ...prev,
-      fields: [
-        ...prev.fields,
-        {
-          templateId: prev.id,
-          id: String(Math.random()),
-          name: "Campo novo",
-          order: prev.fields.length,
-          required: false,
-          type: "text",
-        },
-      ],
-    }))
-  }
-
-  function setFieldName(id: string, name: string) {
-    setTemplate((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) => (f.id === id ? { ...f, name } : f)),
-    }))
-  }
-
-  function setFieldType(id: string, type: FieldType) {
-    setTemplate((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) => (f.id === id ? { ...f, type } : f)),
-    }))
-  }
-
-  function setFieldRequired(id: string, required: boolean) {
-    setTemplate((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) => (f.id === id ? { ...f, required } : f)),
-    }))
-  }
-
-  function removeField(id: string) {
-    setTemplate((prev) => ({
-      ...prev,
-      fields: prev.fields.filter((f) => f.id !== id),
-    }))
-  }
-
-  return (
-    <editTemplateContext.Provider
-      value={{
-        template,
-
-        sync,
-
-        setName,
-        setDescription,
-        addField,
-        setFieldName,
-        setFieldType,
-        setFieldRequired,
-        removeField,
-      }}
-    >
-      {children}
-    </editTemplateContext.Provider>
-  )
-}
+export { action, loader }
 
 export default function EditTemplate({ loaderData }: Route.ComponentProps) {
   const { template } = loaderData

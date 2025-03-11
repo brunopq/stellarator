@@ -5,6 +5,8 @@ import TemplateService from "~/.server/services/TemplateService"
 import SubmissionService from "~/.server/services/SubmissionService"
 
 import { Button } from "~/components/ui/button"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export async function loader({ request }: Route.LoaderArgs) {
   const templates = await TemplateService.listTemplates()
@@ -67,10 +69,28 @@ export default function Fichas({ loaderData }: Route.ComponentProps) {
           <h1 className="font-semibold text-2xl">Suas fichas:</h1>
         </header>
 
-        <ul>
+        <ul className="space-y-6">
           {userSubmissions.map((submission) => (
-            <li key={submission.id}>
-              <strong>{submission.createdAt.toDateString()}</strong>
+            <li
+              key={submission.id}
+              className="grid grid-cols-[1fr_auto] items-center"
+            >
+              <span>
+                <p>
+                  <strong className="font-semibold text-zinc-300/85">
+                    Template:{" "}
+                  </strong>
+                  {submission.template.name}
+                </p>
+                <p>
+                  <strong className="font-semibold text-zinc-300/85">
+                    Criado em:{" "}
+                  </strong>
+                  {format(submission.createdAt, "dd 'de' MMMM, yyyy", {
+                    locale: ptBR,
+                  })}
+                </p>
+              </span>
 
               <Button asChild>
                 <Link to={`edit/${submission.id}`}>Continuar preenchendo</Link>
