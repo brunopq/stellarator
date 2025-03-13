@@ -7,6 +7,7 @@ import {
 } from "@react-router/dev/routes"
 
 export default [
+  route("login", "routes/login.tsx"),
   layout("layouts/maxWidth.tsx", [
     ...prefix("templates", [
       index("routes/templates.tsx"),
