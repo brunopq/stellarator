@@ -9,6 +9,7 @@ import {
 export default [
   route("login", "routes/login.tsx"),
   layout("layouts/maxWidth.tsx", [
+    index("routes/home.tsx"),
     ...prefix("templates", [
       index("routes/templates.tsx"),
       route("edit/:id", "routes/editTemplate/index.tsx"),

@@ -9,4 +9,5 @@ export const env = cleanEnv(process.env, {
   }),
   DB_URL: url(),
   AUTH_URL: url(),
+  COOKIE_SECRET: str(),
 })

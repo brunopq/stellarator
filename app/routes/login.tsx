@@ -1,8 +1,13 @@
 import type { Route } from "./+types/login"
-import { Form } from "react-router"
+import { data, Form, redirect } from "react-router"
 import { z } from "zod"
 
 import AuthService from "~/.server/services/AuthService"
+import {
+  commitSession,
+  getSession,
+  getToken,
+} from "~/.server/cookies/authSession"
 
 import { Input } from "~/components/ui/input"
 import { Button } from "~/components/ui/button"
@@ -11,6 +16,14 @@ const loginSchema = z.object({
   username: z.string(),
   password: z.string(),
 })
+
+export async function loader({ request }: Route.LoaderArgs) {
+  const token = await getToken(request)
+
+  if (token) {
+    return redirect("/")
+  }
+}
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = Object.fromEntries(await request.formData())
@@ -22,9 +35,16 @@ export async function action({ request }: Route.ActionArgs) {
   }
 
   try {
+    const session = await getSession(request)
+
     const userToken = await AuthService.login(loginData.data)
 
-    return userToken
+    session.set("token", userToken)
+
+    return data(
+      { token: userToken },
+      { headers: { "Set-Cookie": await commitSession(session) } },
+    )
   } catch (e) {
     console.log(e)
     return new Response("Login failed", { status: 400 })
