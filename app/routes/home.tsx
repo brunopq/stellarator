@@ -1,20 +1,20 @@
 import type { Route } from "./+types/home"
-import { data, Form, redirect } from "react-router"
+import { data, Form } from "react-router"
 
 import {
   destroySession,
   getSession,
-  getToken,
+  getUserOrRedirect,
 } from "~/.server/cookies/authSession"
 
 import { Button } from "~/components/ui/button"
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const token = await getToken(request)
-
-  if (!token) {
-    return redirect("/login")
-  }
+  const user = await getUserOrRedirect(request, {
+    roles: ["SELLER"],
+    redirectPath: "/login",
+  })
+  return user
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -23,7 +23,7 @@ export async function action({ request }: Route.ActionArgs) {
   return data({}, { headers: { "Set-Cookie": await destroySession(session) } })
 }
 
-export default function Home() {
+export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <div>
       <header className="flex items-center justify-between border-b">
@@ -33,6 +33,14 @@ export default function Home() {
           <Button variant="destructive">Sair</Button>
         </Form>
       </header>
+
+      <main>
+        <h2>Welcome back, {loaderData.name}</h2>
+        <p>{loaderData.id}</p>
+        <p>{loaderData.role}</p>
+        <p>Conta ativa?: {loaderData.accountActive ? "sim" : "não"}</p>
+        <p>Nome completo: {loaderData.fullName}</p>
+      </main>
     </div>
   )
 }

@@ -19,7 +19,6 @@ const loginSchema = z.object({
 
 export async function loader({ request }: Route.LoaderArgs) {
   const token = await getToken(request)
-
   if (token) {
     return redirect("/")
   }
