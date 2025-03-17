@@ -1,20 +1,29 @@
+import { format } from "date-fns"
 import type { Route } from "./+types/home"
-import { data, Form } from "react-router"
+import { data, Form, useLoaderData } from "react-router"
 
 import {
   destroySession,
   getSession,
+  getToken,
   getUserOrRedirect,
 } from "~/.server/cookies/authSession"
+import SubmissionService, {
+  type FullSubmission,
+} from "~/.server/services/SubmissionService"
 
 import { Button } from "~/components/ui/button"
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const user = await getUserOrRedirect(request, {
-    roles: ["SELLER"],
-    redirectPath: "/login",
-  })
-  return user
+  const user = await getUserOrRedirect(request)
+  // biome-ignore lint/style/noNonNullAssertion: <explanation>
+  const token = (await getToken(request))!
+  const submissions = await SubmissionService.list(token)
+
+  return {
+    user,
+    submissions,
+  }
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -24,23 +33,99 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
+  const { user } = loaderData
+
   return (
-    <div>
-      <header className="flex items-center justify-between border-b">
-        <h1>Home page</h1>
+    <>
+      <header className="mb-6 flex items-center justify-between gap-2 border-zinc-400 border-b pb-4 dark:border-zinc-700">
+        <div>
+          <h1 className="font-semibold font-serif text-2xl text-primary-900 dark:text-primary-100">
+            Super sistema de gerenciamento de vendas incrível
+          </h1>
+
+          <span className="w-full">Conta atual: {user.name}</span>
+        </div>
 
         <Form method="DELETE">
-          <Button variant="destructive">Sair</Button>
+          <Button size="sm" variant="destructive">
+            Sair
+          </Button>
         </Form>
       </header>
 
+      {user.role === "ADMIN" ? (
+        <AdminSubmissionsView />
+      ) : (
+        <SellerSubmissionsView />
+      )}
+    </>
+  )
+}
+
+function AdminSubmissionsView() {
+  const { submissions } = useLoaderData<typeof loader>()
+
+  return (
+    <div>
+      <h2 className="mb-4 font-light font-serif text-zinc-300">
+        Visão geral das fichas preenchidas:
+      </h2>
+
       <main>
-        <h2>Welcome back, {loaderData.name}</h2>
-        <p>{loaderData.id}</p>
-        <p>{loaderData.role}</p>
-        <p>Conta ativa?: {loaderData.accountActive ? "sim" : "não"}</p>
-        <p>Nome completo: {loaderData.fullName}</p>
+        {submissions.map((submission) => (
+          <SubmissionCard key={submission.id} submission={submission} />
+        ))}
       </main>
+    </div>
+  )
+}
+
+function SellerSubmissionsView() {
+  return <div>Seller submissions</div>
+}
+
+type SubmissionCardProps = { submission: FullSubmission }
+
+function SubmissionCard({ submission }: SubmissionCardProps) {
+  return (
+    <div className="rounded-sm border p-1 pb-2 shadow dark:border-zinc-800 dark:bg-zinc-800/25">
+      <header className="mb-2 flex items-center gap-4 border-b pb-1 dark:border-zinc-800">
+        <h3 className="rounded-lg px-2 dark:bg-primary-900 dark:text-primary-50">
+          {submission.template.name}
+        </h3>
+        {submission.submitter ? (
+          <div>
+            <span className="dark:text-zinc-300">
+              Preenchido por: <strong>{submission.submitter.name}</strong> em{" "}
+              <strong>{format(submission.createdAt, "dd/MM/yyyy")}</strong>
+            </span>
+          </div>
+        ) : (
+          <div>Usuário excluido</div>
+        )}
+
+        <span className="flex flex-1 justify-end gap-1">
+          <Button size="sm" variant="secondary">
+            Ver ficha
+          </Button>
+          <Button size="sm">Revisar</Button>
+        </span>
+      </header>
+
+      <ul className="px-2">
+        {submission.submittedFields.map((field) => (
+          <li key={field.templateFieldId}>
+            <strong className="dark:text-zinc-300/90">
+              {field.templateField.name}:{" "}
+            </strong>
+            {field.textValue ||
+              field.numberValue ||
+              (field.dateValue && format(field.dateValue, "dd/MM/yyyy")) ||
+              field.checkboxValue?.toString() ||
+              field.textareaValue}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
