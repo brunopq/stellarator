@@ -67,7 +67,7 @@ function AdminSubmissionsView() {
 
   return (
     <div>
-      <h2 className="mb-4 font-light font-serif text-zinc-300">
+      <h2 className="mb-4 font-normal font-serif dark:text-zinc-300">
         Visão geral das fichas preenchidas:
       </h2>
 
@@ -88,14 +88,14 @@ type SubmissionCardProps = { submission: FullSubmission }
 
 function SubmissionCard({ submission }: SubmissionCardProps) {
   return (
-    <div className="rounded-sm border p-1 pb-2 shadow dark:border-zinc-800 dark:bg-zinc-800/25">
-      <header className="mb-2 flex items-center gap-4 border-b pb-1 dark:border-zinc-800">
-        <h3 className="rounded-lg px-2 dark:bg-primary-900 dark:text-primary-50">
+    <div className="rounded-sm border border-zinc-50 bg-zinc-50/50 p-1 pb-2 shadow dark:border-zinc-800 dark:bg-zinc-800/25">
+      <header className="mb-2 flex items-center gap-4 border-zinc-300 border-b pb-1 dark:border-zinc-800">
+        <h3 className="rounded-lg bg-primary-700 px-2 text-primary-50 dark:bg-primary-900 dark:text-primary-50">
           {submission.template.name}
         </h3>
         {submission.submitter ? (
           <div>
-            <span className="dark:text-zinc-300">
+            <span className="text-zinc-700 dark:text-zinc-300">
               Preenchido por: <strong>{submission.submitter.name}</strong> em{" "}
               <strong>{format(submission.createdAt, "dd/MM/yyyy")}</strong>
             </span>
@@ -115,7 +115,7 @@ function SubmissionCard({ submission }: SubmissionCardProps) {
       <ul className="px-2">
         {submission.submittedFields.map((field) => (
           <li key={field.templateFieldId}>
-            <strong className="dark:text-zinc-300/90">
+            <strong className="text-zinc-700 dark:text-zinc-300/90">
               {field.templateField.name}:{" "}
             </strong>
             {field.textValue ||
