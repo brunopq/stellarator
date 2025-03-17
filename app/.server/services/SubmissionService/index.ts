@@ -6,9 +6,22 @@ import type {
   NewSubmission,
   NewSubmittedField,
 } from "../db/schema/submission"
-
 import { submission, submittedField } from "../db/schema"
+import type { Template, TemplateField } from "../db/schema/template"
 import { db } from "../db"
+
+import AuthService, { type User } from "../AuthService"
+
+export type FullSubmittedField = SubmittedField & {
+  templateField: TemplateField
+}
+
+export type SubmissionWithTemplate = Submission & { template: Template }
+export type FullSubmission = Submission & {
+  template: Template
+  submitter?: User
+  submittedFields: FullSubmittedField[]
+}
 
 class SubmissionService {
   private ensureOnlyOneValue(submissionField: SubmittedField) {
@@ -31,14 +44,44 @@ class SubmissionService {
     return truthyCount === 1
   }
 
-  async listByUser(uid: string) {
-    return await db.query.submission.findMany({
-      // where: (fs, {eq}) => eq(fs.submitterId, uid),
+  async list(token: string): Promise<FullSubmission[]> {
+    const submissions = await db.query.submission.findMany({
       with: {
         submittedFields: { with: { templateField: true } },
         template: true,
       },
     })
+
+    const users = await AuthService.getUsers(
+      token,
+      submissions.map((s) => s.submitterId),
+    )
+
+    return submissions.map((s) => ({
+      ...s,
+      submitter: users.get(s.submitterId),
+    }))
+  }
+
+  // TODO: remove token and add service-to-service authentication for user requests
+  async listByUser(uid: string, token: string) {
+    const submissions = await db.query.submission.findMany({
+      where: (s, { eq }) => eq(s.submitterId, uid),
+      with: {
+        submittedFields: { with: { templateField: true } },
+        template: true,
+      },
+    })
+
+    const users = await AuthService.getUsers(
+      token,
+      submissions.map((s) => s.submitterId),
+    )
+
+    return submissions.map((s) => ({
+      ...s,
+      submitter: users.get(s.submitterId),
+    }))
   }
 
   async create(newSubmission: NewSubmission): Promise<Submission> {

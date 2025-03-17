@@ -1,16 +1,21 @@
 import { Form, Link, redirect } from "react-router"
 import type { Route } from "./+types/fichas"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
+import { getToken, getUserOrRedirect } from "~/.server/cookies/authSession"
 import TemplateService from "~/.server/services/TemplateService"
 import SubmissionService from "~/.server/services/SubmissionService"
 
 import { Button } from "~/components/ui/button"
-import { format } from "date-fns"
-import { ptBR } from "date-fns/locale"
 
 export async function loader({ request }: Route.LoaderArgs) {
+  const user = await getUserOrRedirect(request)
+  // biome-ignore lint/style/noNonNullAssertion: get user or redirect will throw if user is not found
+  const token = (await getToken(request))!
+
   const templates = await TemplateService.listTemplates()
-  const userSubmissions = await SubmissionService.listByUser("123")
+  const userSubmissions = await SubmissionService.listByUser(user.id, token)
 
   return {
     templates,
@@ -19,6 +24,8 @@ export async function loader({ request }: Route.LoaderArgs) {
 }
 
 export async function action({ request }: Route.ActionArgs) {
+  const user = await getUserOrRedirect(request)
+
   const formData = await request.formData()
   const templateId = formData.get("templateId")
 
@@ -28,7 +35,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   const createdSumission = await SubmissionService.create({
     templateId,
-    submitterId: "123",
+    submitterId: user.id,
   })
 
   return redirect(`edit/${createdSumission.id}`)

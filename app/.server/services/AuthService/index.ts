@@ -77,6 +77,37 @@ class AuthService {
 
     return result.data
   }
+
+  async getUsers(token: string, ids?: string[]) {
+    const query = ids?.length ? `?ids=${ids.join(",")}` : ""
+    const response = await fetch(`${env.AUTH_URL}/users${query}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (response.status !== 200) {
+      console.error("Failed to get users")
+      console.log(await response.text())
+      throw new Error("Failed to get users")
+    }
+
+    const json = await response.json()
+
+    const result = z.object({ users: z.array(userSchema) }).safeParse(json)
+
+    if (!result.success) {
+      console.error("Users response is invalid")
+      console.error(json)
+      console.error(result.error)
+
+      throw new Error("Users response is invalid")
+    }
+
+    const userMap = new Map(result.data.users.map((user) => [user.id, user]))
+
+    return userMap
+  }
 }
 
 export default new AuthService()

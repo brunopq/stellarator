@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   unique,
+  uuid,
   type PgColumnBuilderBase,
 } from "drizzle-orm/pg-core"
 import { relations, sql } from "drizzle-orm"
@@ -23,7 +24,7 @@ export const submission = pgTable("submissions", {
   templateId: id()
     .notNull()
     .references(() => template.id),
-  submitterId: id().notNull() /*.references(() => user.id)*/,
+  submitterId: uuid().notNull(),
   createdAt: timestamp({ withTimezone: true, mode: "date" })
     .defaultNow()
     .notNull(),
