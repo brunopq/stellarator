@@ -1,6 +1,6 @@
 import { format } from "date-fns"
 import type { Route } from "./+types/home"
-import { data, Form, useLoaderData } from "react-router"
+import { data, Form, Link, useLoaderData } from "react-router"
 
 import {
   destroySession,
@@ -13,6 +13,15 @@ import SubmissionService, {
 } from "~/.server/services/SubmissionService"
 
 import { Button } from "~/components/ui/button"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarProvider,
+  SidebarTrigger,
+} from "~/components/ui/sidebar"
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await getUserOrRedirect(request)
@@ -37,7 +46,40 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
   return (
     <>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Páginas</SidebarGroupLabel>
+          <ul>
+            <li>
+              <Link
+                className="text-primary-50 underline-offset-2 transition-colors hover:text-primary-200 hover:underline"
+                to="/"
+              >
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link
+                className="text-primary-50 underline-offset-2 transition-colors hover:text-primary-200 hover:underline"
+                to="/templates"
+              >
+                Templates
+              </Link>
+            </li>
+            <li>
+              <Link
+                className="text-primary-50 underline-offset-2 transition-colors hover:text-primary-200 hover:underline"
+                to="/fichas"
+              >
+                Fichas
+              </Link>
+            </li>
+          </ul>
+        </SidebarGroup>
+      </SidebarContent>
+
       <header className="mb-6 flex items-center justify-between gap-2 border-zinc-400 border-b pb-4 dark:border-zinc-700">
+        <SidebarTrigger />
         <div>
           <h1 className="font-semibold font-serif text-2xl text-primary-900 dark:text-primary-100">
             Super sistema de gerenciamento de vendas incrível
