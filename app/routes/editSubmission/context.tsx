@@ -2,8 +2,8 @@ import type { Route } from "./+types"
 import { useFetcher } from "react-router"
 import { createContext, useContext, useState, type JSX } from "react"
 
-import type { SubmittedField } from "~/.server/services/db/schema/submission"
-import type { TemplateField } from "~/.server/services/db/schema/template"
+import type { SubmittedField } from "~/.server/db/schema/submission"
+import type { TemplateField } from "~/.server/db/schema/template"
 import type { TemplateWithFields } from "~/.server/services/TemplateService"
 
 import type { FieldWithValue } from "~/components/Form/FormField"

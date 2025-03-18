@@ -2,7 +2,7 @@ import { getUserOrRedirect } from "~/.server/cookies/authSession"
 import type { Route } from "./+types/templates"
 import { Form, Link, redirect } from "react-router"
 
-import type { Template } from "~/.server/services/db/schema/template"
+import type { Template } from "~/.server/db/schema/template"
 import TemplateService from "~/.server/services/TemplateService"
 
 import { Button } from "~/components/ui/button"

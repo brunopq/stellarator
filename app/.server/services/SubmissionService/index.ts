@@ -5,10 +5,10 @@ import type {
   SubmittedField,
   NewSubmission,
   NewSubmittedField,
-} from "../db/schema/submission"
-import { submission, submittedField } from "../db/schema"
-import type { Template, TemplateField } from "../db/schema/template"
-import { db } from "../db"
+} from "../../db/schema/submission"
+import { submission, submittedField } from "../../db/schema"
+import type { Template, TemplateField } from "../../db/schema/template"
+import { db } from "../../db"
 
 import AuthService, { type User } from "../AuthService"
 
