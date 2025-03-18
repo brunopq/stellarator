@@ -5,10 +5,10 @@ import { Sidebar, SidebarProvider } from "~/components/ui/sidebar"
 export default function MaxWidth() {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen justify-center">
+      <div className="flex min-h-screen px-4">
         <Sidebar />
 
-        <div className="mx-auto mt-6 mb-32 w-[min(calc(100%-2rem),64rem)]">
+        <div className="mx-auto mt-6 mb-32 w-full max-w-4xl">
           <Outlet />
         </div>
       </div>

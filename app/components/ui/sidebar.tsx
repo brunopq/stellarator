@@ -146,7 +146,7 @@ const SidebarInner = ({ side }: { side?: "left" | "right" }) => {
 
   return (
     <motion.div
-      className="relative h-screen"
+      className="h-screen max-w-0 md:relative md:max-w-full"
       initial={{ width: 0, opacity: 0 }}
       animate={{ width: SIDEBAR_WIDTH, opacity: 1 }}
       exit={{ width: 0, opacity: 0 }}
@@ -157,8 +157,8 @@ const SidebarInner = ({ side }: { side?: "left" | "right" }) => {
         animate={{ x: 0 }}
         exit={{ x: "-100%" }}
         transition={{ bounce: 0 }}
-        style={{ width: SIDEBAR_WIDTH }}
-        className="absolute inset-4 rounded-md border border-primary-900/75 bg-zinc-800/75 shadow-lg shadow-primary-800/5 backdrop-blur-3xl data-[side=right]:right-4 data-[side=left]:left-4"
+        style={{ width: `calc(${SIDEBAR_WIDTH}px - var(--spacing) * 4)` }}
+        className="absolute inset-4 right-auto w-max rounded-md border border-primary-900/75 bg-zinc-800/75 shadow-lg shadow-primary-800/5 backdrop-blur-2xl md:right-4 md:left-0"
       >
         {children}
       </motion.div>
