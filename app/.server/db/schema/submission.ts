@@ -4,6 +4,7 @@ import {
   boolean,
   check,
   integer,
+  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -19,6 +20,25 @@ import { baseTable, id } from "./utils"
 import { template, templateField } from "./template"
 import type { FieldType } from "./fieldType"
 
+// submissions starts as drafts
+// a submission can always be viewed
+// only when the submission is completed (all the template fields are filled) it can be submitted for review
+// only submissions waiting for review can be approved or have changes requested
+// once a submission is approved, it can't be changed
+const submissionStatesArray = [
+  "draft",
+  "waiting_review",
+  "changes_requested",
+  "approved",
+] as const
+
+export type SubmissionState = (typeof submissionStatesArray)[number]
+
+export const submissionStates = pgEnum(
+  "submission_states",
+  submissionStatesArray,
+)
+
 export const submission = pgTable("submissions", {
   ...baseTable,
   templateId: id()
@@ -29,6 +49,7 @@ export const submission = pgTable("submissions", {
     .defaultNow()
     .notNull(),
   submittedAt: timestamp({ withTimezone: true, mode: "date" }),
+  state: submissionStates().notNull().default("draft"),
 })
 
 export const submissionRelations = relations(submission, ({ one, many }) => ({

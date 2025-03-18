@@ -96,14 +96,25 @@ class SubmissionService {
     return createdSubmission
   }
 
-  async get(submissionId: string) {
-    return await db.query.submission.findFirst({
+  async get(token: string, submissionId: string) {
+    const submission = await db.query.submission.findFirst({
       where: (s, { eq }) => eq(s.id, submissionId),
       with: {
         submittedFields: { with: { templateField: true } },
         template: { with: { fields: true } },
       },
     })
+
+    if (!submission) {
+      return null
+    }
+
+    const user = await AuthService.getUsers(token, [submission.submitterId])
+
+    return {
+      ...submission,
+      submitter: user.get(submission.submitterId),
+    }
   }
 
   async createSubmittedField(

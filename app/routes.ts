@@ -16,7 +16,7 @@ export default [
     ]),
     ...prefix("fichas", [
       index("routes/fichas.tsx"),
-      route("edit/:id", "routes/editSubmission/index.tsx"),
+      route(":id", "routes/submission/index.tsx"),
     ]),
   ]),
 ] satisfies RouteConfig

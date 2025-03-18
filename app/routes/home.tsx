@@ -22,6 +22,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "~/components/ui/sidebar"
+import { cn } from "~/utils/classes"
+import { Badge, SubmissionStateBadge } from "~/components/ui/badge"
 
 export async function loader({ request }: Route.LoaderArgs) {
   const user = await getUserOrRedirect(request)
@@ -131,10 +133,9 @@ type SubmissionCardProps = { submission: FullSubmission }
 function SubmissionCard({ submission }: SubmissionCardProps) {
   return (
     <div className="rounded-sm border border-zinc-50 bg-zinc-50/50 p-1 pb-2 shadow dark:border-zinc-800 dark:bg-zinc-800/25">
-      <header className="mb-2 flex items-center gap-4 border-zinc-300 border-b pb-1 dark:border-zinc-800">
-        <h3 className="rounded-lg bg-primary-700 px-2 text-primary-50 dark:bg-primary-900 dark:text-primary-50">
-          {submission.template.name}
-        </h3>
+      <header className="mb-2 flex items-center gap-2 border-zinc-300 border-b pb-1 dark:border-zinc-800">
+        <Badge>{submission.template.name}</Badge>
+        <SubmissionStateBadge state={submission.state} />
         {submission.submitter ? (
           <div>
             <span className="text-zinc-700 dark:text-zinc-300">

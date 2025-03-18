@@ -79,7 +79,7 @@ const toDomain = (
 }
 
 type EditSubmissionContextProviderProps = {
-  initialSubmission: Route.ComponentProps["loaderData"]
+  initialSubmission: Route.ComponentProps["loaderData"]["submission"]
   children: JSX.Element
 }
 
