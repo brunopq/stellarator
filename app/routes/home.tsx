@@ -116,13 +116,59 @@ function AdminSubmissionsView() {
       </h2>
 
       <main>
-        {submissions.map((submission) => (
-          <SubmissionCard key={submission.id} submission={submission} />
-        ))}
+        <SubmissionsBoard />
       </main>
+
     </div>
   )
 }
+
+function SubmissionsBoard() {
+  const { submissions } = useLoaderData<typeof loader>()
+
+  const draft = submissions.filter(s => s.state === 'draft')
+  const waitingReview = submissions.filter(s => s.state === 'waiting_review')
+  const changesRequested = submissions.filter(s => s.state === 'changes_requested')
+  const approved = submissions.filter(s => s.state === 'approved')
+
+  return (
+    <div className="flex overflow-x-auto gap-4">
+      <SubmissionBoardSection color="red" name="Rascunhos" submissions={draft} />
+
+      <SubmissionBoardSection color="blue" name="Aguardando Revisão" submissions={waitingReview} />
+
+      <SubmissionBoardSection color="yellow" name="Esperando Alterações" submissions={changesRequested} />
+
+      <SubmissionBoardSection color="green" name="Aprovado" submissions={approved} />
+    </div>
+  )
+}
+
+type SubmissionBoardSectionProps = {
+  name: string
+  color: string
+  submissions: FullSubmission[]
+}
+
+function SubmissionBoardSection({ name, color, submissions }: SubmissionBoardSectionProps) {
+  return (
+    <section className="min-w-sm shadow-lg bg-zinc-950/25 rounded-md grow">
+      <header
+        className="p-1">
+        <h3 className="font-semibold text-zinc-300 font-serif">{name}</h3>
+      </header>
+
+      <hr className="border-zinc-800 mx-1" />
+
+      <div className="p-1">
+        {submissions.map(s => (
+          <SubmissionCard key={s.id} submission={s} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 
 function SellerSubmissionsView() {
   return <div>Seller submissions</div>
@@ -134,24 +180,38 @@ function SubmissionCard({ submission }: SubmissionCardProps) {
   return (
     <div className="rounded-sm border border-zinc-50 bg-zinc-50/50 p-1 pb-2 shadow dark:border-zinc-800 dark:bg-zinc-800/25">
       <header className="mb-2 flex items-center gap-2 border-zinc-300 border-b pb-1 dark:border-zinc-800">
-        <Badge>{submission.template.name}</Badge>
-        <SubmissionStateBadge state={submission.state} />
-        {submission.submitter ? (
-          <div>
-            <span className="text-zinc-700 dark:text-zinc-300">
-              Preenchido por: <strong>{submission.submitter.name}</strong> em{" "}
-              <strong>{format(submission.createdAt, "dd/MM/yyyy")}</strong>
-            </span>
-          </div>
-        ) : (
-          <div>Usuário excluido</div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Badge>{submission.template.name}</Badge>
+          <SubmissionStateBadge state={submission.state} />
+          {submission.submitter ? (
+            <div className="text-sm">
+              <span className="text-zinc-700 dark:text-zinc-300">
+                Preenchido por: <strong>{submission.submitter.name}</strong> em{" "}
+                <strong>{format(submission.createdAt, "dd/MM/yyyy")}</strong>
+              </span>
+            </div>
+          ) : (
+            <div>Usuário excluido</div>
+          )}
+        </div>
 
         <span className="flex flex-1 justify-end gap-1">
-          <Button size="sm" variant="secondary">
-            Ver ficha
+          <Button asChild size="sm" variant="secondary">
+            <Link to={{
+              pathname: `/fichas/${submission.id}`,
+              search: 'mode=view'
+            }}>
+              Ver ficha
+            </Link>
           </Button>
-          <Button size="sm">Revisar</Button>
+          <Button asChild size="sm">
+            <Link to={{
+              pathname: `/fichas/${submission.id}`,
+              search: 'mode=review'
+            }}>
+              Revisar
+            </Link>
+          </Button>
         </span>
       </header>
 

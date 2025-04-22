@@ -8,7 +8,7 @@ export default function MaxWidth() {
       <div className="flex min-h-screen px-4">
         <Sidebar />
 
-        <div className="mx-auto mt-6 mb-32 w-full max-w-4xl">
+        <div className="mx-auto mt-6 mb-32 w-full">
           <Outlet />
         </div>
       </div>
