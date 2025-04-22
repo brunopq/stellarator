@@ -2,41 +2,50 @@ import type { Route } from "./+types/index"
 import { Link, useLoaderData } from "react-router"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import type { JSX } from "react"
 
 import { Button } from "~/components/ui/button"
 import { FormField } from "~/components/Form/FormField"
 import { SubmissionStateBadge } from "~/components/ui/badge"
 
-import { loader } from "./loader"
+import { loader, type Mode } from "./loader"
 import { action } from "./action"
 import {
-  EditSubmissionContextProvider,
-  useEditSubmissionContext,
+  SubmissionContextProvider,
+  useSubmissionContext,
 } from "./context"
 
 export { loader, action }
 
 export default function FillForm({ loaderData }: Route.ComponentProps) {
-  console.log(loaderData.mode)
   return (
-    <EditSubmissionContextProvider initialSubmission={loaderData.submission}>
+    <SubmissionContextProvider initialSubmission={loaderData.submission}>
       <div className="grid grid-cols-2 grid-rows-[auto_1fr] place-items-start gap-x-8 gap-y-6">
-        {loaderData.mode === "view" ? (
-          <ViewSubmissionHeader />
-        ) : (
-          <EditSubmissionHeader />
-        )}
-
-        <FilledFieldsPreview />
-
-        {loaderData.mode === "edit" && <FormFields />}
+        {SubmissionPage[loaderData.mode]}
       </div>
-    </EditSubmissionContextProvider>
+    </SubmissionContextProvider>
   )
 }
 
+const SubmissionPage: Record<Mode, JSX.Element> = {
+  edit:
+    <>
+      <EditSubmissionHeader />
+
+      <FilledFieldsPreview />
+
+      <FormFields />
+    </>,
+  review: <><h1>sei la meu kkkkkkkkk</h1></>,
+  view:
+    <>
+      <ViewSubmissionHeader />
+      <FilledFieldsPreview />
+    </>
+}
+
 function ViewSubmissionHeader() {
-  const { template } = useEditSubmissionContext()
+  const { template } = useSubmissionContext()
   const { submission } = useLoaderData<typeof loader>()
 
   const canEdit: boolean = true // TODO: check if user can edit
@@ -76,7 +85,7 @@ function ViewSubmissionHeader() {
 }
 
 function EditSubmissionHeader() {
-  const { template, sync } = useEditSubmissionContext()
+  const { template, sync } = useSubmissionContext()
   const { submission } = useLoaderData<typeof loader>()
 
   return (
@@ -95,7 +104,7 @@ function EditSubmissionHeader() {
 }
 
 function FilledFieldsPreview() {
-  const { filledFormFields } = useEditSubmissionContext()
+  const { filledFormFields } = useSubmissionContext()
 
   return (
     <div className="w-full space-y-4">
@@ -120,7 +129,7 @@ function FilledFieldsPreview() {
 }
 
 function FormFields() {
-  const { filledFormFields, setFieldValue } = useEditSubmissionContext()
+  const { filledFormFields, setFieldValue } = useSubmissionContext()
 
   return (
     <div className="w-full space-y-4">

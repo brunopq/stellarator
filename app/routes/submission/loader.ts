@@ -5,7 +5,7 @@ import { z } from "zod"
 import { getToken, getUserOrRedirect } from "~/.server/cookies/authSession"
 import SubmissionService from "~/.server/services/SubmissionService"
 
-const modeSchema = z.enum(["view", "edit"])
+const modeSchema = z.enum(["view", "edit", "review"])
 
 export type Mode = z.infer<typeof modeSchema>
 
